@@ -30,6 +30,9 @@ export default function App() {
   const [theme, setTheme] = useState("روشن");
   const [privacy, setPrivacy] = useState({ lastSeen: true, photo: true, receipts: true, groups: false });
   const [notifications, setNotifications] = useState({ messages: true, groups: true, preview: true, vibration: false });
+  const [chatPrefs,setChatPrefs] = useState({ wallpaper:"پیش‌فرض",fontSize:"متوسط",saveMedia:false,backup:true });
+  const [dataPrefs,setDataPrefs] = useState({ wifi:true,mobile:false,saver:false });
+  const [securityPrefs,setSecurityPrefs] = useState({ twoStep:false,showSecurity:true });
   const [groups, setGroups] = useState([{id:1,name:"گروه خانواده",members:["من","احمد","فاطمه"]}]);
   const [groupName,setGroupName] = useState("");
   const [groupMember,setGroupMember] = useState("");
@@ -134,6 +137,7 @@ export default function App() {
         <div className="settings-group"><h3>حریم خصوصی</h3>
           <label className="setting-toggle"><span>نمایش آخرین بازدید</span><input type="checkbox" checked={privacy.lastSeen} onChange={e=>setPrivacy(p=>({...p,lastSeen:e.target.checked}))}/></label>
           <label className="setting-toggle"><span>نمایش عکس پروفایل</span><input type="checkbox" checked={privacy.photo} onChange={e=>setPrivacy(p=>({...p,photo:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>نمایش بخش دربارهٔ من</span><input type="checkbox" checked={privacy.about??true} onChange={e=>setPrivacy(p=>({...p,about:e.target.checked}))}/></label>
           <label className="setting-toggle"><span>رسید خواندن پیام</span><input type="checkbox" checked={privacy.receipts} onChange={e=>setPrivacy(p=>({...p,receipts:e.target.checked}))}/></label>
           <label className="setting-toggle"><span>اجازه افزودن به گروه‌ها</span><input type="checkbox" checked={privacy.groups} onChange={e=>setPrivacy(p=>({...p,groups:e.target.checked}))}/></label>
         </div>
@@ -144,7 +148,25 @@ export default function App() {
           <label className="setting-toggle"><span>لرزش</span><input type="checkbox" checked={notifications.vibration} onChange={e=>setNotifications(p=>({...p,vibration:e.target.checked}))}/></label>
         </div>
         <div className="settings-group"><h3>زبان و ظاهر</h3><label>زبان برنامه<select value={language} onChange={e=>setLanguage(e.target.value)}><option>دری</option><option>پشتو</option><option>English</option></select></label><label>رنگ برنامه<select value={theme} onChange={e=>setTheme(e.target.value)}><option>روشن</option><option>تاریک</option><option>مطابق گوشی</option></select></label><p className="setting-hint">انتخاب‌ها ذخیرهٔ آزمایشی هستند؛ پشتیبانی کامل چندزبانه و حالت تاریک در مرحلهٔ بعد تکمیل می‌شود.</p></div>
-        <div className="settings-group"><h3>حافظه و اینترنت</h3><p>دانلود خودکار رسانه و پشتیبان‌گیری پس از راه‌اندازی سرور فعال می‌شود.</p></div>
+        <div className="settings-group"><h3>گفتگوها</h3>
+          <label>پس‌زمینهٔ گفتگو<select value={chatPrefs.wallpaper} onChange={e=>setChatPrefs(p=>({...p,wallpaper:e.target.value}))}><option>پیش‌فرض</option><option>سبز روشن</option><option>ساده و سفید</option><option>تیره</option></select></label>
+          <label>اندازهٔ نوشته<select value={chatPrefs.fontSize} onChange={e=>setChatPrefs(p=>({...p,fontSize:e.target.value}))}><option>کوچک</option><option>متوسط</option><option>بزرگ</option></select></label>
+          <label className="setting-toggle"><span>ذخیرهٔ رسانه در گالری</span><input type="checkbox" checked={chatPrefs.saveMedia} onChange={e=>setChatPrefs(p=>({...p,saveMedia:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>پشتیبان‌گیری از گفتگوها</span><input type="checkbox" checked={chatPrefs.backup} onChange={e=>setChatPrefs(p=>({...p,backup:e.target.checked}))}/></label>
+        </div>
+        <div className="settings-group"><h3>حافظه و مصرف اینترنت</h3>
+          <label className="setting-toggle"><span>دانلود خودکار با وای‌فای</span><input type="checkbox" checked={dataPrefs.wifi} onChange={e=>setDataPrefs(p=>({...p,wifi:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>دانلود خودکار با اینترنت موبایل</span><input type="checkbox" checked={dataPrefs.mobile} onChange={e=>setDataPrefs(p=>({...p,mobile:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>صرفه‌جویی در مصرف اینترنت</span><input type="checkbox" checked={dataPrefs.saver} onChange={e=>setDataPrefs(p=>({...p,saver:e.target.checked}))}/></label>
+          <p className="setting-hint">این گزینه‌ها در نسخهٔ نمایشی هستند؛ دانلود خودکار و پشتیبان‌گیری واقعی پس از اتصال سرور فعال می‌شوند.</p>
+        </div>
+        <div className="settings-group"><h3>حساب و امنیت</h3>
+          <label className="setting-toggle"><span>تأیید دومرحله‌ای</span><input type="checkbox" checked={securityPrefs.twoStep} onChange={e=>setSecurityPrefs(p=>({...p,twoStep:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>نمایش هشدارهای امنیتی</span><input type="checkbox" checked={securityPrefs.showSecurity} onChange={e=>setSecurityPrefs(p=>({...p,showSecurity:e.target.checked}))}/></label>
+          <p className="setting-hint">امنیت حساب و تأیید دومرحله‌ای پس از فعال‌شدن ورود واقعی تنظیم می‌شود.</p>
+        </div>
+        <div className="settings-group"><h3>کمک و دربارهٔ افغان چت</h3><p>نسخهٔ آزمایشی رابط کاربری افغان چت</p><p>برای پشتیبانی و گزارش مشکل، این بخش در نسخهٔ اصلی تکمیل می‌شود.</p><small>نسخه ۰.۱ · Afghan Chat</small></div>
+
         <p className="demo-warning">تنظیمات حساب و حریم خصوصی فعلاً روی سرور ذخیره نمی‌شوند.</p></section> : null}
       {page === "groups" && <section className="content-page"><h2>گروه‌ها</h2><p>گروه تازه بساز و اعضا را اضافه کن.</p><form className="friend-form" onSubmit={e=>{e.preventDefault();if(groupName.trim()){setGroups(gs=>[{id:Date.now(),name:groupName.trim(),members:["من",...(groupMember.trim()?[groupMember.trim()]:[])]},...gs]);setGroupName("");setGroupMember("");}}}><label>نام گروه</label><input value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="مثلاً گروه دوستان"/><label>نام یک عضو (اختیاری)</label><input value={groupMember} onChange={e=>setGroupMember(e.target.value)} placeholder="نام دوست"/><button className="send" type="submit">ساخت گروه</button></form><div className="status-list"><h3>گروه‌های من</h3>{groups.map(g=><div className="status-card" key={g.id}><strong>{g.name}</strong><p>{g.members.length} عضو: {g.members.join("، ")}</p><button className="text-action" onClick={()=>setGroups(gs=>gs.filter(x=>x.id!==g.id))}>حذف گروه آزمایشی</button></div>)}</div><p className="demo-warning">ساخت و حذف گروه فعلاً فقط در همین گوشی انجام می‌شود.</p></section>}
       {page === "account" && <section className="content-page"><h2>ورود به افغان چت</h2><p>با شمارهٔ افغانستان یا ایران وارد شو. ورود گوگل نیز در نسخهٔ اصلی وصل می‌شود.</p><div className="settings-group"><h3>ورود با شماره تلفن</h3><label>کشور<select value={loginCountry} onChange={e=>setLoginCountry(e.target.value)}><option value="+93">افغانستان +93</option><option value="+98">ایران +98</option></select></label><label>شماره تلفن<input dir="ltr" value={loginPhone} onChange={e=>setLoginPhone(e.target.value)} placeholder="700000000"/></label>{loginStep&&<label>کد آزمایشی<input dir="ltr" value={loginCode} onChange={e=>setLoginCode(e.target.value)} placeholder="کد یک‌بارمصرف"/></label>}<button className="send" onClick={()=>{if(!loginPhone.trim()){setNotice("شماره تلفن را وارد کن.");return;}if(!loginStep){setLoginStep(true);setNotice("این فقط مرحلهٔ نمایشی است؛ پیامک واقعی فرستاده نشده. برای آزمایش هر کدی وارد کن.");}else if(loginCode.trim()){setLoggedIn(true);setDisplayName(displayName==="حساب من"?"کاربر افغان چت":displayName);setNotice("ورود آزمایشی انجام شد.");}}}>{loginStep?"تأیید کد آزمایشی":"دریافت کد ورود"}</button><button className="secondary-action" onClick={()=>{setLoggedIn(true);setNotice("ورود گوگل در این نسخه فقط نمایشی است؛ اتصال واقعی بعداً فعال می‌شود.");}}>ادامه با Google</button>{loggedIn&&<p className="login-success">ورود آزمایشی فعال است.</p>}{notice&&<p className="notice">{notice}</p>}</div><p className="demo-warning">این ورود واقعی نیست و هیچ پیامک یا حساب گوگل تأیید نمی‌شود؛ اتصال امن بعداً با سرور انجام خواهد شد.</p></section>}
