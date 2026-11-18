@@ -7,24 +7,25 @@ A polished multilingual messaging app for Android and other devices, with a fami
 - Iran phone numbers (+98), verified by SMS one-time code (OTP)
 - Google account sign-in
 
-After signing in, users can create a display name and profile photo.
+After signing in, users can create and edit a profile with a display name, profile photo, and optional profile information.
 
-## Planned messaging features
+## Planned messaging and social features
 - One-to-one text messaging with real-time delivery
 - Voice calls and video calls
-- Send and receive photos and videos
-- Create groups and add or remove group members
+- Send and receive photos, videos, voice messages, and files
+- Create groups, add or remove group members, and manage group information
 - Add friends and contacts by phone number
 - User profiles with profile photos and display names
+- 24-hour Status updates: share photos, videos, and text with friends; view friends' statuses; control status audience and privacy
 - Delete messages sent by the current user
-- Message notifications and notification controls
+- Message and call notifications
 - Android-friendly installable experience
 
 ## Settings experience (WhatsApp-inspired)
 Create a clean, attractive, easy-to-navigate Settings area, inspired by common messaging-app patterns without copying WhatsApp branding or interface assets. Include:
 - Account: phone number, account details, privacy and security controls
 - Profile: change profile photo, display name, and profile information
-- Privacy: last-seen/online visibility, profile-photo visibility, about visibility, read receipts, blocked contacts, and group-invite permissions
+- Privacy: last-seen/online visibility, profile-photo visibility, about visibility, read receipts, blocked contacts, status audience, and group-invite permissions
 - Chats: chat wallpaper/theme, font or text size, chat backup options, chat history, and media visibility
 - Notifications: message and group tones, vibration, previews, and call alerts
 - Storage and data: storage usage, media auto-download over Wi-Fi/mobile data, and data-saving options
@@ -35,10 +36,10 @@ Create a clean, attractive, easy-to-navigate Settings area, inspired by common m
 Privacy-sensitive options must have clear explanations and sensible defaults. Settings should be grouped into readable sections, work well on small Android screens, and support right-to-left Dari and Pashto layouts as well as left-to-right English.
 
 ## Project status
-The repository currently contains an initial React + Vite interface. The features above are requirements, not yet a completed production messaging service. Real messaging, authentication, calls, media storage, notifications, backups, and deployment still need backend services and configuration.
+The repository currently contains an initial React + Vite interface. The features above are requirements, not yet a completed production messaging service. Real messaging, authentication, calls, media storage, status updates, notifications, backups, and deployment still need backend services and configuration.
 
 ## Development approach
-Build in stages: multilingual app foundation and interface; phone OTP and Google authentication; user profiles and contacts; privacy/settings screens; database and real-time messaging; groups; media uploads; notifications and backup; voice/video calling; then Android packaging and testing.
+Build in stages: multilingual app foundation and interface; phone OTP and Google authentication; user profiles and contacts; privacy/settings screens; database and real-time messaging; groups; media uploads and 24-hour status; notifications and backup; voice/video calling; then Android packaging and testing.
 
 ## SMS provider requirement
 SMS verification for +93 and +98 requires an authentication/SMS provider that supports delivery to both Afghanistan and Iran. Provider coverage, pricing, and required credentials must be checked before enabling live OTP. Never commit provider secrets or API keys to GitHub.
