@@ -1,4 +1,5 @@
 import {
+  get,
   onValue,
   push,
   ref,
@@ -43,5 +44,9 @@ export async function sendChatMessage(chatId, user, text) {
 export async function deleteOwnChatMessage(chatId, messageId, user) {
   const { database } = requireFirebase();
   const messageRef = ref(database, `messages/${chatId}/${messageId}`);
+  const snapshot = await get(messageRef);
+  if (!snapshot.exists() || snapshot.val()?.senderId !== user?.uid) {
+    throw new Error("فقط فرستنده می‌تواند پیام خودش را حذف کند.");
+  }
   await remove(messageRef);
 }
