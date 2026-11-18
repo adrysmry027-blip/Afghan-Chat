@@ -33,3 +33,42 @@
 
 .hidden-file{display:none!important}.avatar-button{border:0;padding:0;overflow:hidden;cursor:pointer}.avatar-button img{width:100%;height:100%;object-fit:cover}.secondary-action{border:1px solid #dce9df;background:#f2f7f3;color:#205c34;border-radius:11px;padding:11px 14px;font:inherit;font-size:12px;cursor:pointer}.status-preview{display:grid;gap:8px}.status-preview img,.status-preview video{width:100%;max-height:260px;object-fit:contain;border-radius:12px;background:#101810}.status-preview button,.text-action{justify-self:start;border:0;background:transparent;color:#a14d4d;font:inherit;font-size:11px;cursor:pointer}.status-media{display:block;max-width:100%;max-height:260px;margin-top:10px;border-radius:12px}.status-card small{display:block;color:#87948b;margin-top:8px;font-size:10px}.status-tools{display:flex;gap:8px;margin-top:10px}.status-tools button{border:0;border-radius:9px;background:#eef5ef;color:#315d3c;padding:7px 10px;font:inherit;font-size:11px;cursor:pointer}.login-success{color:#176238;font-size:12px}.dark-theme{background:#111b15;color:#e5eee7}.dark-theme .sidebar,.dark-theme .conversation-head,.dark-theme .composer,.dark-theme .bubble,.dark-theme .settings-group,.dark-theme .status-card,.dark-theme .friend-form,.dark-theme .help-card{background:#1b2920;color:#e5eee7;border-color:#304337}.dark-theme .conversation,.dark-theme .content-page{background:#111b15}.dark-theme .messages{background-color:#111b15;background-image:radial-gradient(#2a3a30 1px,transparent 1px)}.dark-theme .mine .bubble{background:#254b32}.dark-theme .profile,.dark-theme .side-action.active,.dark-theme .chat-item.selected,.dark-theme .secondary-action,.dark-theme .status-tools button{background:#263c2d;color:#e5eee7}.dark-theme input,.dark-theme textarea,.dark-theme select{background:#142019!important;color:#e5eee7!important;border-color:#405448!important}.dark-theme .demo-warning{background:#17231b;color:#a5b5aa}.dark-theme .chat-copy span,.dark-theme .content-page>p,.dark-theme .status-card p{color:#a6b7aa}
 @media(max-width:680px){.side-actions{grid-template-columns:repeat(7,minmax(0,1fr));gap:1px}.side-action{font-size:9px;padding:8px 1px;white-space:nowrap}.status-tools button{font-size:10px;padding:7px 8px}}
+
+/* Final mobile and offline-first visual refinements */
+@media(max-width:680px){
+  .app-shell{height:100dvh;min-height:0;overflow:hidden}
+  .sidebar{padding:9px 10px 7px;gap:7px}
+  .side-actions{display:flex;overflow-x:auto;scrollbar-width:none;gap:5px;margin:0;padding:0 0 3px}
+  .side-actions::-webkit-scrollbar,.chat-list::-webkit-scrollbar{display:none}
+  .side-action{flex:1 0 auto;min-width:48px;text-align:center;font-size:10px;padding:9px 7px;white-space:nowrap;background:#f3f7f4}
+  .side-action.active{background:#14532d;color:#fff}
+  .section-title{display:flex;margin:2px 4px 0;font-size:11px}
+  .chat-list{display:flex;overflow-x:auto;gap:7px;padding:0 0 3px;scrollbar-width:none}
+  .chat-item{flex:0 0 145px;min-width:145px;padding:7px;background:#f3f7f4;gap:7px}
+  .chat-item .avatar{width:34px;height:34px}
+  .chat-copy strong{font-size:11px}
+  .chat-copy span{font-size:9px}
+  .chat-meta{font-size:8px}
+  .sidebar-note{display:none}
+  .conversation{flex:1;min-height:0}
+  .content-page{flex:1;min-height:0;padding:18px 14px 28px}
+  .content-page h2{font-size:19px}
+  .conversation-head{padding:10px 13px}
+  .messages{padding:14px 11px}
+  .composer{gap:6px;padding:9px}
+  .composer input{padding:10px;font-size:12px}
+  .attach,.send{padding:0 11px}
+  .demo-warning{font-size:9px;line-height:1.7;padding:5px 8px 8px}
+}
+@media(min-width:681px){
+  .app-shell{border-radius:0}
+  .content-page{padding:32px clamp(22px,4vw,42px)}
+}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #58a875;outline-offset:2px}
+button:disabled{opacity:.55;cursor:not-allowed}
+.status-card,.settings-group,.help-card,.friend-form{box-shadow:0 5px 18px rgba(21,65,37,.035)}
+.status-card{line-height:1.8}
+.status-card strong,.status-card b{color:#245a35}
+.settings-group label{line-height:1.8}
+.call-actions button:hover,.secondary-action:hover,.call-row button:hover{filter:brightness(.97)}
+@media(prefers-reduced-motion:no-preference){button,.chat-item{transition:background .15s ease,color .15s ease,transform .15s ease}.chat-item:active,button:active{transform:scale(.985)}}
