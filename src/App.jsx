@@ -100,7 +100,7 @@ export default function App() {
     <main className={theme === "تاریک" ? "app-shell dark-theme" : theme === "مطابق گوشی" ? "app-shell system-theme" : "app-shell"}>
       {page === "welcome" ? <section className="welcome-screen" dir="rtl">
         <div className="welcome-card">
-          <div className="welcome-logo">اچ</div>
+          <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
           <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
           <h1>خوش آمدید به افغان چت</h1>
           <p className="welcome-intro">برای ادامه، یکی از روش‌های ورود را انتخاب کنید.</p>
@@ -128,8 +128,8 @@ export default function App() {
         </div>
       </section> : null}
       {!["welcome","google-login"].includes(page) && <aside className="sidebar">
-        <header className="brand"><div className="brand-mark">اچ</div><div><h1>افغان چت</h1><p>Afghan Chat</p></div></header>
-        <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : "ع"}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(file)setProfileImage(URL.createObjectURL(file));}}/><div><strong>{displayName}</strong><span>{about}</span></div></div>
+        <header className="brand"><div className="brand-mark"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div><div><h1>افغان چت</h1><p>Afghan Chat</p></div></header>
+        <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : <img src="/afghan-chat-logo.svg" alt="عکس پروفایل افغان چت"/>}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(file)setProfileImage(URL.createObjectURL(file));}}/><div><strong>{displayName}</strong><span>{about}</span></div></div>
         <div className="side-actions">
           <button className={page === "chats" ? "side-action active" : "side-action"} onClick={() => setPage("chats")}>گفتگوها</button>
           <button className={page === "friends" ? "side-action active" : "side-action"} onClick={() => setPage("friends")}>دوستان</button>
