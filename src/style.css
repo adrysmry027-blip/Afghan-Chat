@@ -541,3 +541,43 @@ body{background:#dce3e7;color:var(--wa-text)}
  .content-page{background:#f7f9fa}
  .welcome-screen{background:linear-gradient(145deg,#075e54,#128c7e)}
 }
+
+
+/* Larger WhatsApp-like mobile inbox and clear new-message action. */
+.new-message{border:0;border-radius:18px;background:#e7f5ec;color:#075e54;padding:7px 13px;font-weight:700;font-size:12px;cursor:pointer}
+.chat-item .avatar{width:58px;height:58px;flex:0 0 58px;overflow:hidden;background:#dce8e1}
+.chat-item .avatar img,.conversation-head .avatar img{width:100%;height:100%;display:block;object-fit:cover;border-radius:50%}
+.chat-item{min-height:82px;align-items:center}
+.chat-copy strong{font-size:15px}
+.chat-copy span{font-size:13px}
+.mobile-back{display:none;border:0;background:transparent;color:var(--wa-green);font-size:30px;line-height:1;padding:0 7px}
+@media(max-width:680px){
+ .app-shell{position:relative}
+ .app-shell:not(.mobile-chat-open) .conversation{display:none!important}
+ .app-shell.mobile-chat-open .sidebar{display:none!important}
+ .app-shell.mobile-chat-open .conversation{display:flex!important;min-height:0;height:100%;padding-bottom:0}
+ .app-shell.mobile-chat-open .conversation-head{height:64px;min-height:64px}
+ .mobile-back{display:inline-flex;align-items:center;justify-content:center}
+ .brand{min-height:66px;padding:11px 15px}
+ .brand h1{font-size:21px}
+ .brand p{font-size:12px}
+ .side-actions{position:relative;inset:auto;height:auto;padding:8px 7px;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;border-bottom:1px solid var(--wa-line);box-shadow:none}
+ .side-action{height:47px;min-width:0;padding:8px 3px;font-size:12px;border:1px solid #e8edef;border-radius:10px;background:#f8faf9;white-space:nowrap}
+ .side-action.active{background:#e5f4eb;border:1px solid #b9dfc7;border-bottom:2px solid var(--wa-green-2);font-weight:700}
+ .section-title{display:flex!important;align-items:center;justify-content:space-between;margin:12px 15px 7px;font-size:17px;font-weight:700}
+ .new-message{font-size:13px;padding:9px 14px}
+ .chat-list{display:flex!important;flex-direction:column;overflow-y:auto;overflow-x:hidden;gap:0;padding:0;background:#fff}
+ .chat-item{width:100%;min-width:0;flex:0 0 auto;min-height:88px;padding:12px 15px;display:flex;border:0;border-bottom:1px solid #edf0f1;border-radius:0;text-align:right}
+ .chat-item .avatar{width:58px;height:58px;flex:0 0 58px}
+ .chat-copy{gap:7px}
+ .chat-copy strong{font-size:16px}
+ .chat-copy span{font-size:13px;max-width:220px}
+ .chat-meta{font-size:11px;gap:7px}
+ .conversation-head .avatar{width:43px;height:43px;flex:0 0 43px;overflow:hidden}
+ .conversation-head .contact-title strong{font-size:16px}
+ .messages{flex:1;overflow-y:auto}
+ .composer{padding:10px 8px;gap:7px}
+ .composer input{font-size:15px;min-height:44px}
+ .send{font-size:13px;padding:9px 15px}
+ .demo-warning{font-size:9px}
+}
