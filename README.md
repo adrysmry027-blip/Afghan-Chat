@@ -1,26 +1,30 @@
 # Afghan Chat (افغان چت)
 
-A cross-platform messaging app project for Afghan and international users.
+A multilingual messaging app for Android and other devices.
+
+## Sign-in methods
+- Afghanistan phone numbers (+93)
+- Iran phone numbers (+98)
+- Google account sign-in
+
+After signing in, users can create a display name and profile photo.
 
 ## Planned features
-
-- Sign up and sign in with Afghanistan (+93) and Iran (+98) phone numbers
-- Google sign-in
-- User profiles with display names and profile photos
-- Add and manage friends
-- Real-time one-to-one messaging
-- Share photos and files
+- One-to-one text messaging with real-time delivery
+- Voice calls and video calls
+- Send and receive photos and videos
+- Create groups and add or remove group members
+- Add friends and contacts by phone number
+- User profiles with profile photos and display names
+- Pashto, Dari, and English interface languages
 - Delete messages sent by the current user
 - Android-friendly installable experience
 
 ## Project status
-
-This repository is the starting point. Authentication, messaging, media storage, and deployment still need to be implemented and configured.
+The repository currently contains an initial React + Vite interface. The features above are requirements, not yet a completed production messaging service. Real messaging, authentication, calls, media storage, and deployment still need backend services and configuration.
 
 ## Development approach
+Build in stages: multilingual app foundation and interface; authentication; user profiles and contacts; database and real-time messaging; groups; media uploads; voice/video calling; then Android packaging and testing.
 
-The application will be built in stages, starting with the app foundation and interface, then authentication, database, real-time messaging, media uploads, and Android packaging.
-
-## Important security note
-
-Never commit passwords, API keys, private service credentials, or signing keys to this repository. Use environment variables and provider-side configuration for secrets.
+## Security
+Never commit passwords, API keys, private service credentials, or Android signing keys. Store secrets in environment variables or provider-side secret settings.
