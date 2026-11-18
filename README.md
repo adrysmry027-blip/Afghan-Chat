@@ -9,6 +9,15 @@ A polished multilingual messaging app for Android and other devices, with a fami
 
 After signing in, users can create and edit a profile with a display name, profile photo, and optional profile information.
 
+## Contacts and finding friends
+- Find existing Afghan Chat users by entering their full phone number, including country code (+93 or +98)
+- With the user's explicit permission, optionally match phone numbers from the device contacts against registered Afghan Chat accounts
+- Show matching registered users so the user can add them as friends and start a chat
+- If a contact is not registered, offer a shareable invitation instead of pretending the person is already on Afghan Chat
+- Provide manual phone-number search even if contact access is denied
+- Protect contact data: request permission only when needed, explain its use, minimize retention, and never expose a user's address book to other users
+- Let users control who can find them by phone number and who can add them to groups
+
 ## Planned messaging and social features
 - One-to-one text messaging with real-time delivery
 - Voice calls and video calls
@@ -17,8 +26,8 @@ After signing in, users can create and edit a profile with a display name, profi
 - Add friends and contacts by phone number
 - User profiles with profile photos and display names
 - 24-hour Status updates: share photos, videos, and text with friends; view friends' statuses; control status audience and privacy
-- Status interactions: send emoji reactions and reply with text comments to a specific photo or video status; deliver the reaction or reply privately to the status owner
-- Status owner can view and manage replies and reactions; status audience and privacy controls apply
+- Status interactions: send emoji reactions and reply with text to a specific photo or video status; deliver the reaction or reply privately to the status owner only
+- Status owner can view and manage replies and reactions; other viewers cannot see private replies
 - Delete messages sent by the current user
 - Message and call notifications
 - Android-friendly installable experience
@@ -27,7 +36,7 @@ After signing in, users can create and edit a profile with a display name, profi
 Create a clean, attractive, easy-to-navigate Settings area, inspired by common messaging-app patterns without copying WhatsApp branding or interface assets. Include:
 - Account: phone number, account details, privacy and security controls
 - Profile: change profile photo, display name, and profile information
-- Privacy: last-seen/online visibility, profile-photo visibility, about visibility, read receipts, blocked contacts, status audience, and group-invite permissions
+- Privacy: last-seen/online visibility, profile-photo visibility, about visibility, read receipts, blocked contacts, status audience, phone-number discoverability, and group-invite permissions
 - Chats: chat wallpaper/theme, font or text size, chat backup options, chat history, and media visibility
 - Notifications: message and group tones, vibration, previews, and call alerts
 - Storage and data: storage usage, media auto-download over Wi-Fi/mobile data, and data-saving options
@@ -38,10 +47,10 @@ Create a clean, attractive, easy-to-navigate Settings area, inspired by common m
 Privacy-sensitive options must have clear explanations and sensible defaults. Settings should be grouped into readable sections, work well on small Android screens, and support right-to-left Dari and Pashto layouts as well as left-to-right English.
 
 ## Project status
-The repository currently contains an initial React + Vite interface. The features above are requirements, not yet a completed production messaging service. Real messaging, authentication, calls, media storage, status updates and interactions, notifications, backups, and deployment still need backend services and configuration.
+The repository currently contains an initial React + Vite interface. The features above are requirements, not yet a completed production messaging service. Real messaging, authentication, contact matching, calls, media storage, status updates and interactions, notifications, backups, and deployment still need backend services and configuration.
 
 ## Development approach
-Build in stages: multilingual app foundation and interface; phone OTP and Google authentication; user profiles and contacts; privacy/settings screens; database and real-time messaging; groups; media uploads and 24-hour status with reactions and replies; notifications and backup; voice/video calling; then Android packaging and testing.
+Build in stages: multilingual app foundation and interface; phone OTP and Google authentication; user profiles and phone-number/contact discovery; privacy/settings screens; database and real-time messaging; groups; media uploads and 24-hour status with private reactions and replies; notifications and backup; voice/video calling; then Android packaging and testing.
 
 ## SMS provider requirement
 SMS verification for +93 and +98 requires an authentication/SMS provider that supports delivery to both Afghanistan and Iran. Provider coverage, pricing, and required credentials must be checked before enabling live OTP. Never commit provider secrets or API keys to GitHub.
