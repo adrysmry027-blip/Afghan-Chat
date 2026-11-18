@@ -28,7 +28,34 @@ export default function App() {
     setMessage("");
   }
 
-  function addAttachment(event) {\n    const file = event.target.files?.[0];\n    if (!file) return;\n    const url = URL.createObjectURL(file);\n    const kind = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : "file";\n    setMessages((items) => [...items, { id: Date.now(), from: "me", type: kind, url, name: file.name }]);\n    event.target.value = "";\n  }\n\n  async function toggleRecording() {\n    if (recording && recorder.current) { recorder.current.stop(); setRecording(false); return; }\n    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { setNotice("ضبط صدا در این مرورگر پشتیبانی نمی‌شود."); return; }\n    try {\n      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });\n      const media = new MediaRecorder(stream);\n      const chunks = [];\n      media.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };\n      media.onstop = () => {\n        const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" });\n        const url = URL.createObjectURL(blob);\n        setMessages((items) => [...items, { id: Date.now(), from: "me", type: "audio", url }]);\n        stream.getTracks().forEach((track) => track.stop());\n      };\n      recorder.current = media; media.start(); setRecording(true);\n    } catch { setNotice("برای ضبط پیام صوتی، اجازهٔ استفاده از میکروفون را بده."); }\n  }\n\n  function findFriend(event) {
+  function addAttachment(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const kind = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : "file";
+    setMessages((items) => [...items, { id: Date.now(), from: "me", type: kind, url, name: file.name }]);
+    event.target.value = "";
+  }
+
+  async function toggleRecording() {
+    if (recording && recorder.current) { recorder.current.stop(); setRecording(false); return; }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { setNotice("ضبط صدا در این مرورگر پشتیبانی نمی‌شود."); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const media = new MediaRecorder(stream);
+      const chunks = [];
+      media.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      media.onstop = () => {
+        const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        setMessages((items) => [...items, { id: Date.now(), from: "me", type: "audio", url }]);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+      recorder.current = media; media.start(); setRecording(true);
+    } catch { setNotice("برای ضبط پیام صوتی، اجازهٔ استفاده از میکروفون را بده."); }
+  }
+
+  function findFriend(event) {
     event.preventDefault();
     const value = phone.trim();
     if (!value) { setNotice("لطفاً شماره را با کود کشور وارد کن؛ مانند +93700000000"); return; }
