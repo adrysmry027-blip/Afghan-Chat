@@ -17,6 +17,8 @@ After signing in, users can create and edit a profile with a display name, profi
 - Add friends and contacts by phone number
 - User profiles with profile photos and display names
 - 24-hour Status updates: share photos, videos, and text with friends; view friends' statuses; control status audience and privacy
+- Status interactions: send emoji reactions and reply with text comments to a specific photo or video status; deliver the reaction or reply privately to the status owner
+- Status owner can view and manage replies and reactions; status audience and privacy controls apply
 - Delete messages sent by the current user
 - Message and call notifications
 - Android-friendly installable experience
@@ -36,10 +38,10 @@ Create a clean, attractive, easy-to-navigate Settings area, inspired by common m
 Privacy-sensitive options must have clear explanations and sensible defaults. Settings should be grouped into readable sections, work well on small Android screens, and support right-to-left Dari and Pashto layouts as well as left-to-right English.
 
 ## Project status
-The repository currently contains an initial React + Vite interface. The features above are requirements, not yet a completed production messaging service. Real messaging, authentication, calls, media storage, status updates, notifications, backups, and deployment still need backend services and configuration.
+The repository currently contains an initial React + Vite interface. The features above are requirements, not yet a completed production messaging service. Real messaging, authentication, calls, media storage, status updates and interactions, notifications, backups, and deployment still need backend services and configuration.
 
 ## Development approach
-Build in stages: multilingual app foundation and interface; phone OTP and Google authentication; user profiles and contacts; privacy/settings screens; database and real-time messaging; groups; media uploads and 24-hour status; notifications and backup; voice/video calling; then Android packaging and testing.
+Build in stages: multilingual app foundation and interface; phone OTP and Google authentication; user profiles and contacts; privacy/settings screens; database and real-time messaging; groups; media uploads and 24-hour status with reactions and replies; notifications and backup; voice/video calling; then Android packaging and testing.
 
 ## SMS provider requirement
 SMS verification for +93 and +98 requires an authentication/SMS provider that supports delivery to both Afghanistan and Iran. Provider coverage, pricing, and required credentials must be checked before enabling live OTP. Never commit provider secrets or API keys to GitHub.
