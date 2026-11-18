@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const demoChats = [
   { id: 1, name: "احمد", message: "سلام، خوبی؟", time: "۹:۳۰", unread: 2, color: "green" },
@@ -16,6 +16,9 @@ export default function App() {
     { id: 2, from: "me", text: "سلام، تشکر!" }
   ]);
   const [notice, setNotice] = useState("");
+  const filePicker = useRef(null);
+  const recorder = useRef(null);
+  const [recording, setRecording] = useState(false);
 
   function sendMessage(event) {
     event.preventDefault();
@@ -25,7 +28,7 @@ export default function App() {
     setMessage("");
   }
 
-  function findFriend(event) {
+  function addAttachment(event) {\n    const file = event.target.files?.[0];\n    if (!file) return;\n    const url = URL.createObjectURL(file);\n    const kind = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : "file";\n    setMessages((items) => [...items, { id: Date.now(), from: "me", type: kind, url, name: file.name }]);\n    event.target.value = "";\n  }\n\n  async function toggleRecording() {\n    if (recording && recorder.current) { recorder.current.stop(); setRecording(false); return; }\n    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { setNotice("ضبط صدا در این مرورگر پشتیبانی نمی‌شود."); return; }\n    try {\n      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });\n      const media = new MediaRecorder(stream);\n      const chunks = [];\n      media.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };\n      media.onstop = () => {\n        const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" });\n        const url = URL.createObjectURL(blob);\n        setMessages((items) => [...items, { id: Date.now(), from: "me", type: "audio", url }]);\n        stream.getTracks().forEach((track) => track.stop());\n      };\n      recorder.current = media; media.start(); setRecording(true);\n    } catch { setNotice("برای ضبط پیام صوتی، اجازهٔ استفاده از میکروفون را بده."); }\n  }\n\n  function findFriend(event) {
     event.preventDefault();
     const value = phone.trim();
     if (!value) { setNotice("لطفاً شماره را با کود کشور وارد کن؛ مانند +93700000000"); return; }
@@ -46,10 +49,10 @@ export default function App() {
         <div className="sidebar-note">نسخهٔ آزمایشی افغان چت</div>
       </aside>
       {page === "chats" ? <section className="conversation">
-        <header className="conversation-head"><div className="avatar green">{active.name.slice(0, 1)}</div><div><strong>{active.name}</strong><span>گفتگوی آزمایشی</span></div><button className="more" aria-label="گزینه‌ها">•••</button></header>
-        <div className="messages"><div className="date-chip">امروز</div>{messages.map((item) => <div className={"bubble-row " + (item.from === "me" ? "mine" : "")} key={item.id}><div className="bubble">{item.text}<small>{item.from === "me" ? "ارسال شد" : "دریافت شد"}</small></div>{item.from === "me" && <button className="delete" title="حذف پیام" onClick={() => setMessages((all) => all.filter((m) => m.id !== item.id))}>حذف</button>}</div>)}</div>
-        <form className="composer" onSubmit={sendMessage}><button className="attach" type="button" title="ارسال فایل (به‌زودی)">＋</button><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="پیامت را بنویس..." aria-label="متن پیام" /><button className="send" type="submit">ارسال</button></form>
-        <p className="demo-warning">این نسخه نمایشی است؛ پیام‌ها هنوز به کاربران دیگر فرستاده نمی‌شوند.</p>
+        <header className="conversation-head"><div className="avatar green">{active.name.slice(0, 1)}</div><div className="contact-title"><strong>{active.name}</strong><span>گفتگوی آزمایشی</span></div><div className="call-actions"><button type="button" title="تماس صوتی" onClick={() => setNotice("تماس صوتی پس از راه‌اندازی سرور تماس فعال می‌شود.")}>☎</button><button type="button" title="تماس تصویری" onClick={() => setNotice("تماس تصویری پس از راه‌اندازی سرور تماس فعال می‌شود.")}>▣</button></div><button className="more" aria-label="گزینه‌ها">•••</button></header>
+        <div className="messages"><div className="date-chip">امروز</div>{messages.map((item) => <div className={"bubble-row " + (item.from === "me" ? "mine" : "")} key={item.id}><div className="bubble">{item.type === "image" ? <img className="message-media" src={item.url} alt="عکس فرستاده‌شده" /> : item.type === "video" ? <video className="message-media" src={item.url} controls /> : item.type === "audio" ? <audio src={item.url} controls /> : item.type === "file" ? <a href={item.url} download={item.name}>{item.name}</a> : item.text}<small>{item.from === "me" ? "در همین گوشی" : "دریافت شد"}</small></div>{item.from === "me" && <button className="delete" title="حذف پیام" onClick={() => setMessages((all) => all.filter((m) => m.id !== item.id))}>حذف</button>}</div>)}</div>
+        <form className="composer" onSubmit={sendMessage}><input ref={filePicker} className="hidden-file" type="file" accept="image/*,video/*" onChange={addAttachment} /><button className="attach" type="button" title="فرستادن عکس یا ویدیو" onClick={() => filePicker.current?.click()}>＋</button><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="پیامت را بنویس..." aria-label="متن پیام" /><button className={recording ? "record recording" : "record"} type="button" title={recording ? "پایان ضبط" : "ضبط پیام صوتی"} onClick={toggleRecording}>{recording ? "■" : "🎙"}</button><button className="send" type="submit">ارسال</button></form>
+        {notice && <button className="notice chat-notice" onClick={() => setNotice("")}>{notice}  ✕</button>}<p className="demo-warning">عکس، ویدیو و صدای ضبط‌شده فعلاً فقط در همین گوشی نمایش داده می‌شود؛ برای ارسال واقعی به دیگران سرور لازم است.</p>
       </section> : page === "friends" ? <section className="content-page">
         <h2>افزودن دوستان</h2><p>شماره دوستت را با کود کشور وارد کن تا حساب افغان چت او جست‌وجو شود.</p>
         <form className="friend-form" onSubmit={findFriend}><label htmlFor="friend-phone">شماره تلفن</label><input id="friend-phone" dir="ltr" value={phone} onChange={(e) => {setPhone(e.target.value);setNotice("");}} placeholder="+93700000000" /><button className="send" type="submit">جست‌وجوی دوست</button></form>
