@@ -9,3 +9,22 @@
 
 .friend-form textarea{width:100%;resize:vertical;border:1px solid #dfe8e1;border-radius:12px;padding:13px;font:inherit;font-size:14px}.status-list{max-width:520px;margin-top:24px}.status-list h3{font-size:14px;margin:20px 0 10px}.status-card{background:#fff;border:1px solid #e7eee8;border-radius:14px;padding:15px;margin-bottom:9px;font-size:13px}.status-card p{margin:8px 0 0;color:#65756b;line-height:1.8}.call-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.call-row span{flex:1}.call-row small{color:#89968e}.call-row button{border:0;background:#eaf4ec;color:#176238;border-radius:9px;padding:8px 12px;font:inherit;cursor:pointer}
 @media(max-width:680px){.app-shell{display:flex;flex-direction:column;height:100dvh}.sidebar{display:flex;flex:none;padding:10px 12px 8px;border-left:0;border-bottom:1px solid #e8eee9}.brand{display:none}.profile{display:none}.side-actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;margin:0}.side-action{text-align:center;font-size:10px;padding:9px 2px}.section-title,.chat-list,.sidebar-note{display:none}.conversation,.content-page{flex:1;min-height:0}.content-page{overflow:auto}.conversation-head{height:64px;flex:none}.messages{min-height:0}.composer{flex:none}.demo-warning{flex:none}}
+
+
+/* Call preparation screen: intentionally offline and non-dialing. */
+.call-actions{display:flex;gap:8px;margin-right:auto}
+.call-actions button{width:38px;height:38px;border:0;border-radius:12px;background:#eaf4ec;color:#176238;font-size:18px;cursor:pointer}
+.call-overlay{position:fixed;inset:0;z-index:20;background:rgba(9,28,17,.58);display:grid;place-items:center;padding:18px}
+.call-panel{width:min(430px,100%);background:#fff;border-radius:26px;padding:30px 24px;text-align:center;box-shadow:0 24px 80px #071b1040}
+.call-symbol{width:76px;height:76px;margin:0 auto 14px;border-radius:25px;background:#e8f4eb;color:#176238;display:grid;place-items:center;font-size:32px}
+.call-eyebrow{font-size:11px;color:#819087;margin:0}
+.call-panel h2{font-size:23px;margin:8px 0 2px}
+.call-mode{font-size:13px;color:#728078;margin:0}
+.call-status{display:inline-flex;align-items:center;gap:8px;margin:22px 0 16px;padding:8px 14px;border-radius:30px;background:#f0f6f1;color:#315c3d;font-size:12px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#d69a35}
+.call-disabled-note{background:#fff7e8;border:1px solid #f3e4c5;border-radius:15px;padding:15px;text-align:right}
+.call-disabled-note strong{font-size:13px;color:#805b1e}
+.call-disabled-note p{font-size:12px;line-height:1.9;color:#806f50;margin:6px 0 0}
+.call-checks{display:grid;gap:8px;margin:16px 0;color:#718078;font-size:11px;text-align:right}
+.call-close{width:100%;border:0;border-radius:13px;background:#176238;color:#fff;padding:13px;font:inherit;font-size:13px;cursor:pointer}
+@media(max-width:680px){.call-panel{padding:26px 19px}.call-overlay{align-items:center}}
