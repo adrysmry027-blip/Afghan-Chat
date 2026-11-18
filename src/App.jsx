@@ -24,6 +24,12 @@ export default function App() {
   const [statusText, setStatusText] = useState("");
   const [myStatuses, setMyStatuses] = useState([]);
   const [callSession, setCallSession] = useState(null);
+  const [displayName, setDisplayName] = useState("حساب من");
+  const [about, setAbout] = useState("خوش آمدی");
+  const [language, setLanguage] = useState("دری");
+  const [theme, setTheme] = useState("روشن");
+  const [privacy, setPrivacy] = useState({ lastSeen: true, photo: true, receipts: true, groups: false });
+  const [notifications, setNotifications] = useState({ messages: true, groups: true, preview: true, vibration: false });
 
   function openCall(contact, media) {
     setCallSession(createCallSession({ contact, media }));
@@ -75,7 +81,7 @@ export default function App() {
     <main className="app-shell">
       <aside className="sidebar">
         <header className="brand"><div className="brand-mark">اچ</div><div><h1>افغان چت</h1><p>Afghan Chat</p></div></header>
-        <div className="profile"><div className="avatar self">ع</div><div><strong>حساب من</strong><span>خوش آمدی</span></div></div>
+        <div className="profile"><div className="avatar self">ع</div><div><strong>{displayName}</strong><span>{about}</span></div></div>
         <div className="side-actions">
           <button className={page === "chats" ? "side-action active" : "side-action"} onClick={() => setPage("chats")}>گفتگوها</button>
           <button className={page === "friends" ? "side-action active" : "side-action"} onClick={() => setPage("friends")}>دوستان</button>
@@ -97,7 +103,23 @@ export default function App() {
         <div className="help-card"><strong>دوستت افغان چت ندارد؟</strong><p>می‌توانی بعداً لینک دعوت را برایش بفرستی.</p></div>
         {notice && <p className="notice">{notice}</p>}
         <p className="demo-warning">جست‌وجوی واقعی نیازمند سرور و اتصال امن به شماره‌های ثبت‌شده است.</p>
-      </section> : <section className="content-page"><h2>تنظیمات</h2><div className="settings-list"><div>حساب و امنیت</div><div>حریم خصوصی</div><div>اعلان‌ها</div><div>زبان: دری، پشتو، انگلیسی</div><div>ظاهر: روشن و تاریک</div><div>حافظه و اینترنت</div></div><p className="demo-warning">این گزینه‌ها فعلاً نمایشی‌اند و در مراحل بعد فعال می‌شوند.</p></section>}
+      </section> : <section className="content-page settings-page"><h2>تنظیمات</h2><p>حساب و برنامهٔ افغان چت را مدیریت کن.</p>
+        <div className="settings-group"><h3>پروفایل من</h3><label>نام نمایشی<input value={displayName} onChange={e=>setDisplayName(e.target.value)} /></label><label>دربارهٔ من<input value={about} onChange={e=>setAbout(e.target.value)} /></label><small>تغییرات فعلاً در همین گوشی نمایش داده می‌شود.</small></div>
+        <div className="settings-group"><h3>حریم خصوصی</h3>
+          <label className="setting-toggle"><span>نمایش آخرین بازدید</span><input type="checkbox" checked={privacy.lastSeen} onChange={e=>setPrivacy(p=>({...p,lastSeen:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>نمایش عکس پروفایل</span><input type="checkbox" checked={privacy.photo} onChange={e=>setPrivacy(p=>({...p,photo:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>رسید خواندن پیام</span><input type="checkbox" checked={privacy.receipts} onChange={e=>setPrivacy(p=>({...p,receipts:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>اجازه افزودن به گروه‌ها</span><input type="checkbox" checked={privacy.groups} onChange={e=>setPrivacy(p=>({...p,groups:e.target.checked}))}/></label>
+        </div>
+        <div className="settings-group"><h3>اعلان‌ها</h3>
+          <label className="setting-toggle"><span>اعلان پیام‌ها</span><input type="checkbox" checked={notifications.messages} onChange={e=>setNotifications(p=>({...p,messages:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>اعلان گروه‌ها</span><input type="checkbox" checked={notifications.groups} onChange={e=>setNotifications(p=>({...p,groups:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>نمایش متن پیام</span><input type="checkbox" checked={notifications.preview} onChange={e=>setNotifications(p=>({...p,preview:e.target.checked}))}/></label>
+          <label className="setting-toggle"><span>لرزش</span><input type="checkbox" checked={notifications.vibration} onChange={e=>setNotifications(p=>({...p,vibration:e.target.checked}))}/></label>
+        </div>
+        <div className="settings-group"><h3>زبان و ظاهر</h3><label>زبان برنامه<select value={language} onChange={e=>setLanguage(e.target.value)}><option>دری</option><option>پشتو</option><option>English</option></select></label><label>رنگ برنامه<select value={theme} onChange={e=>setTheme(e.target.value)}><option>روشن</option><option>تاریک</option><option>مطابق گوشی</option></select></label><p className="setting-hint">انتخاب‌ها ذخیرهٔ آزمایشی هستند؛ پشتیبانی کامل چندزبانه و حالت تاریک در مرحلهٔ بعد تکمیل می‌شود.</p></div>
+        <div className="settings-group"><h3>حافظه و اینترنت</h3><p>دانلود خودکار رسانه و پشتیبان‌گیری پس از راه‌اندازی سرور فعال می‌شود.</p></div>
+        <p className="demo-warning">تنظیمات حساب و حریم خصوصی فعلاً روی سرور ذخیره نمی‌شوند.</p></section>}
       {callSession && <CallScreen session={callSession} onClose={() => setCallSession(null)} />}
     </main>
   );
