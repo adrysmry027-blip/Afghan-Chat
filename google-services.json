@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "347231228222",
+    "project_id": "afghan-chat-4d04a",
+    "storage_bucket": "afghan-chat-4d04a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:347231228222:android:4bfbaf2d64ccb5ddb49c6f",
+        "android_client_info": {
+          "package_name": "com.afghanchat.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4TYgKdCbOo5ZLE3QrFcxxEnAi7IL-Jng"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
