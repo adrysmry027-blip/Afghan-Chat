@@ -3,13 +3,14 @@ import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
 
 const demoChats = [
-  { id: 1, name: "احمد", message: "سلام، خوبی؟", time: "۹:۳۰", unread: 2, color: "green" },
-  { id: 2, name: "فاطمه", message: "عکس را فرستادم", time: "دیروز", unread: 0, color: "blue" },
-  { id: 3, name: "گروه خانواده", message: "محمد: تشکر", time: "دیروز", unread: 0, color: "orange" }
+  { id: 1, name: "احمد", message: "سلام، خوبی؟", time: "۹:۳۰", unread: 2, color: "green", photo: "https://i.pravatar.cc/120?img=12" },
+  { id: 2, name: "فاطمه", message: "عکس را فرستادم", time: "دیروز", unread: 0, color: "blue", photo: "https://i.pravatar.cc/120?img=47" },
+  { id: 3, name: "گروه خانواده", message: "محمد: تشکر", time: "دیروز", unread: 0, color: "orange", photo: "https://i.pravatar.cc/120?img=_group" }
 ];
 
 export default function App() {
   const [page, setPage] = useState("welcome");
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [googleEmail, setGoogleEmail] = useState("");
   const [demoGooglePassword, setDemoGooglePassword] = useState("");
   const [active, setActive] = useState(demoChats[0]);
@@ -97,7 +98,7 @@ export default function App() {
   }
 
   return (
-    <main className={theme === "تاریک" ? "app-shell dark-theme" : theme === "مطابق گوشی" ? "app-shell system-theme" : "app-shell"}>
+    <main className={(theme === "تاریک" ? "app-shell dark-theme" : theme === "مطابق گوشی" ? "app-shell system-theme" : "app-shell") + (mobileChatOpen ? " mobile-chat-open" : "")}>
       {page === "welcome" ? <section className="welcome-screen" dir="rtl">
         <div className="welcome-card">
           <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
@@ -131,7 +132,7 @@ export default function App() {
         <header className="brand"><div className="brand-mark"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div><div><h1>افغان چت</h1><p>Afghan Chat</p></div></header>
         <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : <img src="/afghan-chat-logo.svg" alt="عکس پروفایل افغان چت"/>}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(file)setProfileImage(URL.createObjectURL(file));}}/><div><strong>{displayName}</strong><span>{about}</span></div></div>
         <div className="side-actions">
-          <button className={page === "chats" ? "side-action active" : "side-action"} onClick={() => setPage("chats")}>گفتگوها</button>
+          <button className={page === "chats" ? "side-action active" : "side-action"} onClick={() => {setPage("chats");setMobileChatOpen(false);}}>گفتگوها</button>
           <button className={page === "friends" ? "side-action active" : "side-action"} onClick={() => setPage("friends")}>دوستان</button>
           <button className={page === "status" ? "side-action active" : "side-action"} onClick={() => setPage("status")}>وضعیت</button>
           <button className={page === "calls" ? "side-action active" : "side-action"} onClick={() => setPage("calls")}>تماس‌ها</button>
@@ -139,11 +140,11 @@ export default function App() {
           <button className={page === "account" ? "side-action active" : "side-action"} onClick={() => setPage("account")}>ورود</button>
           <button className={page === "settings" ? "side-action active" : "side-action"} onClick={() => setPage("settings")}>تنظیمات</button>
         </div>
-        {page === "chats" && <><div className="section-title">گفتگوها <span>۳</span></div><nav className="chat-list" aria-label="گفتگوها">{demoChats.map((chat) => <button className={active.id === chat.id ? "chat-item selected" : "chat-item"} key={chat.id} onClick={() => setActive(chat)}><div className={"avatar " + chat.color}>{chat.name.slice(0, 1)}</div><div className="chat-copy"><strong>{chat.name}</strong><span>{chat.message}</span></div><div className="chat-meta"><time>{chat.time}</time>{chat.unread > 0 && <i>{chat.unread}</i>}</div></button>)}</nav></>}
+        {page === "chats" && <><div className="section-title"><span>گفتگوها</span><button className="new-message" type="button" onClick={()=>setPage("friends")}>＋ پیام جدید</button></div><nav className="chat-list" aria-label="گفتگوها">{demoChats.map((chat) => <button className={active.id === chat.id ? "chat-item selected" : "chat-item"} key={chat.id} onClick={() => {setActive(chat);setMobileChatOpen(true);}}><div className={"avatar " + chat.color}>{chat.photo && <img src={chat.photo} alt={chat.name}/>}</div><div className="chat-copy"><strong>{chat.name}</strong><span>{chat.message}</span></div><div className="chat-meta"><time>{chat.time}</time>{chat.unread > 0 && <i>{chat.unread}</i>}</div></button>)}</nav></>}
         <div className="sidebar-note">نسخهٔ آزمایشی افغان چت</div>
       </aside>}
       {page === "chats" ? <section className="conversation">
-        <header className="conversation-head"><div className="avatar green">{active.name.slice(0, 1)}</div><div className="contact-title"><strong>{active.name}</strong><span>گفتگوی آزمایشی</span></div><div className="call-actions"><button type="button" title="تماس صوتی" onClick={() => openCall(active.name, "voice")}>☎</button><button type="button" title="تماس تصویری" onClick={() => openCall(active.name, "video")}>▣</button></div><button className="more" aria-label="گزینه‌ها">•••</button></header>
+        <header className="conversation-head"><button className="mobile-back" type="button" onClick={()=>setMobileChatOpen(false)} aria-label="بازگشت به گفتگوها">‹</button><div className="avatar green">{active.photo ? <img src={active.photo} alt={active.name}/> : active.name.slice(0, 1)}</div><div className="contact-title"><strong>{active.name}</strong><span>گفتگوی آزمایشی</span></div><div className="call-actions"><button type="button" title="تماس صوتی" onClick={() => openCall(active.name, "voice")}>☎</button><button type="button" title="تماس تصویری" onClick={() => openCall(active.name, "video")}>▣</button></div><button className="more" aria-label="گزینه‌ها">•••</button></header>
         <div className="messages"><div className="date-chip">امروز</div>{messages.map((item) => <div className={"bubble-row " + (item.from === "me" ? "mine" : "")} key={item.id}><div className="bubble">{item.type === "image" ? <img className="message-media" src={item.url} alt="عکس فرستاده‌شده" /> : item.type === "video" ? <video className="message-media" src={item.url} controls /> : item.type === "audio" ? <audio src={item.url} controls /> : item.type === "file" ? <a href={item.url} download={item.name}>{item.name}</a> : item.text}<small>{item.from === "me" ? "در همین گوشی" : "دریافت شد"}</small></div>{item.from === "me" && <button className="delete" title="حذف پیام" onClick={() => setMessages((all) => all.filter((m) => m.id !== item.id))}>حذف</button>}</div>)}</div>
         <form className="composer" onSubmit={sendMessage}><input ref={filePicker} className="hidden-file" type="file" accept="image/*,video/*,audio/*" onChange={addAttachment} /><button className="attach" type="button" title="فرستادن عکس یا ویدیو" onClick={() => filePicker.current?.click()}>＋</button><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="پیامت را بنویس..." aria-label="متن پیام" /><button className={recording ? "record recording" : "record"} type="button" title={recording ? "پایان ضبط" : "ضبط پیام صوتی"} onClick={toggleRecording}>{recording ? "■" : "🎙"}</button><button className="send" type="submit">ارسال</button></form>
         {notice && <button className="notice chat-notice" onClick={() => setNotice("")}>{notice}  ✕</button>}<p className="demo-warning">عکس، ویدیو و صدای ضبط‌شده فعلاً فقط در همین گوشی نمایش داده می‌شود؛ برای ارسال واقعی به دیگران سرور لازم است.</p>
