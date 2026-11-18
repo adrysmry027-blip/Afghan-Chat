@@ -132,3 +132,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .dark-theme .welcome-intro,.dark-theme .welcome-foot,.dark-theme .welcome-card>small{color:#a6b7aa}
 .dark-theme .google-signin{background:#24352a;border-color:#405448;color:#e5eee7}
 .dark-theme .security-note{background:#24352a;color:#b6c5ba}
+
+
+/* Afghan Chat branded app/profile mark */
+.brand-mark{overflow:hidden;padding:0}
+.brand-mark img{width:100%;height:100%;display:block;object-fit:cover}
+.welcome-logo{overflow:hidden;padding:0}
+.welcome-logo img{width:100%;height:100%;display:block;object-fit:cover}
+.profile .avatar img{width:100%;height:100%;display:block;object-fit:cover}
