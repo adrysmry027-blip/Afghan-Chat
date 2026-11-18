@@ -10,6 +10,7 @@ on:
       - "index.html"
       - "package.json"
       - "capacitor.config.json"
+      - "google-services.json"
       - "vite.config.js"
       - ".github/workflows/android-apk.yml"
 
@@ -45,6 +46,13 @@ jobs:
       - name: Add Android project
         run: npx cap add android
         timeout-minutes: 5
+      - name: Configure Firebase Android
+        run: |
+          test -f google-services.json
+          mkdir -p android/app
+          cp google-services.json android/app/google-services.json
+          grep -q "com.google.gms:google-services" android/build.gradle || sed -i "/dependencies {/a\\        classpath 'com.google.gms:google-services:4.4.2'" android/build.gradle
+          grep -q "com.google.gms.google-services" android/app/build.gradle || printf "\\napply plugin: 'com.google.gms.google-services'\\n" >> android/app/build.gradle
       - name: Sync Android project
         run: npx cap sync android
         timeout-minutes: 5
