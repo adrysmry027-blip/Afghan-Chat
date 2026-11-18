@@ -9,7 +9,8 @@ const demoChats = [
 ];
 
 export default function App() {
-  const [page, setPage] = useState("chats");
+  const [page, setPage] = useState("welcome");
+  const [googleEmail, setGoogleEmail] = useState("");
   const [active, setActive] = useState(demoChats[0]);
   const [message, setMessage] = useState("");
   const [phone, setPhone] = useState("");
@@ -96,6 +97,33 @@ export default function App() {
 
   return (
     <main className={theme === "تاریک" ? "app-shell dark-theme" : theme === "مطابق گوشی" ? "app-shell system-theme" : "app-shell"}>
+      {page === "welcome" ? <section className="welcome-screen" dir="rtl">
+        <div className="welcome-card">
+          <div className="welcome-logo">اچ</div>
+          <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
+          <h1>خوش آمدید به افغان چت</h1>
+          <p className="welcome-intro">برای ادامه، یکی از روش‌های ورود را انتخاب کنید.</p>
+          <button className="google-signin" type="button" onClick={()=>setPage("google-login")}><span className="google-g">G</span><span>ورود با گوگل</span></button>
+          <button className="phone-signin" type="button" onClick={()=>setPage("account")}><span>☎</span><span>ورود با شماره تلفن</span></button>
+          <div className="welcome-divider"><span>ورود آسان و امن</span></div>
+          <p className="welcome-foot">با ورود به افغان‌چت، می‌توانی با دوستان و خانواده‌ات در ارتباط باشی.</p>
+          <small>نسخهٔ آزمایشی · Afghan Chat</small>
+        </div>
+      </section> : page === "google-login" ? <section className="welcome-screen" dir="rtl">
+        <div className="welcome-card login-card">
+          <button className="back-link" type="button" onClick={()=>setPage("welcome")}>← بازگشت</button>
+          <div className="google-g large">G</div>
+          <h1>ورود با حساب گوگل</h1>
+          <p className="welcome-intro">آدرس جیمیل خود را وارد کن تا در نسخهٔ اصلی به صفحهٔ امن گوگل هدایت شوی.</p>
+          <form className="google-email-form" onSubmit={e=>{e.preventDefault();if(!googleEmail.trim()){setNotice("لطفاً آدرس جیمیل را وارد کن.");return;}setNotice("ورود واقعی گوگل هنوز وصل نشده است. در نسخهٔ اصلی، تأیید حساب فقط در صفحهٔ رسمی گوگل انجام می‌شود.");}}>
+            <label htmlFor="google-email">آدرس جیمیل</label>
+            <input id="google-email" type="email" dir="ltr" autoComplete="email" value={googleEmail} onChange={e=>setGoogleEmail(e.target.value)} placeholder="name@gmail.com" required />
+            <button className="send" type="submit">ادامه با گوگل</button>
+          </form>
+          <p className="security-note">افغان‌چت هرگز رمز جیمیل یا کد تأیید گوگل را از تو نمی‌خواهد. کد امنیتی را فقط در صفحهٔ رسمی گوگل وارد کن.</p>
+          {notice && <p className="notice">{notice}</p>}
+        </div>
+      </section> : null}
       <aside className="sidebar">
         <header className="brand"><div className="brand-mark">اچ</div><div><h1>افغان چت</h1><p>Afghan Chat</p></div></header>
         <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : "ع"}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(file)setProfileImage(URL.createObjectURL(file));}}/><div><strong>{displayName}</strong><span>{about}</span></div></div>
