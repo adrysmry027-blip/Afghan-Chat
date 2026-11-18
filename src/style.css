@@ -86,3 +86,15 @@ button:disabled{opacity:.55;cursor:not-allowed}
   .call-actions{gap:5px}
   .call-actions button{width:34px;height:34px}
 }
+
+@media(prefers-color-scheme:dark){
+  .system-theme{background:#111b15;color:#e5eee7}
+  .system-theme .sidebar,.system-theme .conversation-head,.system-theme .composer,.system-theme .bubble,.system-theme .settings-group,.system-theme .status-card,.system-theme .friend-form,.system-theme .help-card{background:#1b2920;color:#e5eee7;border-color:#304337}
+  .system-theme .conversation,.system-theme .content-page{background:#111b15}
+  .system-theme .messages{background-color:#111b15;background-image:radial-gradient(#2a3a30 1px,transparent 1px)}
+  .system-theme .mine .bubble{background:#254b32}
+  .system-theme .side-action.active,.system-theme .chat-item.selected,.system-theme .secondary-action,.system-theme .status-tools button{background:#263c2d;color:#e5eee7}
+  .system-theme input,.system-theme textarea,.system-theme select{background:#142019!important;color:#e5eee7!important;border-color:#405448!important}
+  .system-theme .demo-warning{background:#17231b;color:#a5b5aa}
+  .system-theme .chat-copy span,.system-theme .content-page>p,.system-theme .status-card p{color:#a6b7aa}
+}
