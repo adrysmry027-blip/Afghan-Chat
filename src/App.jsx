@@ -500,20 +500,39 @@ export default function App() {
 
   return (
     <main className={(theme === "تاریک" ? "app-shell dark-theme" : theme === "مطابق گوشی" ? "app-shell system-theme" : "app-shell") + (mobileChatOpen ? " mobile-chat-open" : "")}>
-      {page === "welcome" ? <section className="welcome-screen" dir="rtl">
-        <div className="welcome-card">
-          <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
-          <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
-          <h1>خوش آمدید به افغان چت</h1>
-          <p className="welcome-intro">برای ادامه، یکی از روش‌های ورود را انتخاب کنید.</p>
-          <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}><span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ورود با گوگل"}</span></button>
-          <button className="phone-signin" type="button" onClick={()=>setPage("account")}><span>☎</span><span>ورود با شماره تلفن</span></button>
-          <div className="welcome-divider"><span>ورود آسان و امن</span></div>
-          <p className="welcome-foot">با ورود به افغان‌چت، می‌توانی با دوستان و خانواده‌ات در ارتباط باشی.</p>
-          <small>نسخهٔ آزمایشی · Afghan Chat</small>
+      {page === "welcome" ? <section className="wa-auth-screen" dir="rtl">
+        <button className="wa-auth-menu" type="button" aria-label="منوی بیشتر">⋮</button>
+        <div className="wa-auth-center">
+          <div className="wa-auth-illustration"><img src="/afghan-chat-logo.svg" alt="نشان افغان چت"/></div>
+          <h1>به افغان چت خوش آمدید</h1>
+          <p>ارتباط آسان، امن و قابل اعتماد برای دوستان و خانواده</p>
+          <p>با افغان‌ها در هر جا در تماس بمانید</p>
+        </div>
+        <div className="wa-auth-footer">
+          <p>با ادامه دادن، شما با شرایط استفاده و حریم خصوصی افغان چت موافقت می‌کنید.</p>
+          <button type="button" onClick={()=>setPage("phone-login")}>موافقت و ادامه</button>
+          <button className="wa-auth-google" type="button" onClick={()=>setPage("google-login")}>ورود با گوگل</button>
+        </div>
+      </section> : page === "phone-login" ? <section className="wa-auth-screen wa-phone-screen" dir="rtl">
+        <button className="wa-auth-menu" type="button" aria-label="منوی بیشتر">⋮</button>
+        <div className="wa-phone-form">
+          <button className="back-link" type="button" onClick={()=>{setPage("welcome");setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>← بازگشت</button>
+          <h1>شماره تلفنتان را وارد کنید</h1>
+          <p>افغان چت شمارهٔ تلفن شما را تأیید می‌کند و ممکن است پیامک‌های مربوط به حساب برایتان ارسال شود.</p>
+          <a className="wa-learn-more" href="#phone-help" onClick={e=>{e.preventDefault();setNotice("شمارهٔ تلفن برای تأیید حساب و حفاظت از ورود استفاده می‌شود.");}}>بیشتر بدانید</a>
+          <select aria-label="کشور" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>
+            <option value="+93">افغانستان</option><option value="+98">ایران</option><option value="+92">پاکستان</option><option value="+992">تاجیکستان</option><option value="+998">ازبکستان</option><option value="+993">ترکمنستان</option><option value="+90">ترکیه</option><option value="+971">امارات</option>
+          </select>
+          {!phoneOtpSent ? <div className="wa-phone-number"><span>{loginCountry}</span><input aria-label="شماره تلفن" type="tel" inputMode="numeric" autoComplete="tel-national" dir="ltr" value={phoneNumber} onChange={e=>{setPhoneNumber(e.target.value.replace(/[^0-9]/g,""));setNotice("");}} placeholder="شماره تلفن"/></div> : <>
+            <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
+            <input id="login-otp" className="wa-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک"/>
+          </>}
+          <button className="wa-next" type="button" disabled={authBusy || (!phoneOtpSent && phoneNumber.replace(/\\D/g,"").length<6) || (phoneOtpSent && phoneOtp.length!==6)} onClick={phoneOtpSent?verifyPhoneCode:sendPhoneCode}>{authBusy?(phoneOtpSent?"در حال بررسی...":"در حال ارسال..."):phoneOtpSent?"تأیید و ادامه":"بعدی"}</button>
+          {phoneOtpSent && <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>}
+          {notice && <p className="notice" role="alert">{notice}</p>}
         </div>
       </section> : page === "google-login" ? <section className="welcome-screen" dir="rtl"><div className="welcome-card login-card"><button className="back-link" type="button" onClick={()=>setPage("welcome")}>← بازگشت</button><div className="google-g large">G</div><h1>ورود امن با گوگل</h1><p className="welcome-intro">برای ورود، حساب گوگل را در صفحهٔ رسمی انتخاب کن.</p><button className="send" type="button" disabled={authBusy} onClick={loginWithGoogle}>{authBusy ? "در حال اتصال..." : "ادامه با Google"}</button><p className="security-note">رمز جیمیل را در افغان‌چت وارد نکن؛ تأیید هویت در صفحهٔ رسمی گوگل انجام می‌شود.</p>{notice && <p className="notice">{notice}</p>}</div></section>: null}
-      {!["welcome","google-login"].includes(page) && <aside className="sidebar">
+      {!["welcome","phone-login","google-login"].includes(page) && <aside className="sidebar">
         <header className="brand">
           <div className="brand-identity">
             <div><h1>افغان چت</h1></div>
