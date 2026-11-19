@@ -131,10 +131,14 @@ export default function App() {
       }
       if (cancelled) return;
       setConversations(items);
+      setGroups(items.filter((item) => item.is_group).map((item) => ({ id: item.id, name: item.title || item.name, members: [] })));
       setActive((current) => items.find((item) => item.id === current?.id) || items[0] || { id: null, name: "هنوز گفتگویی نداری", photo: "" });
     }
     loadConversations();
-    return () => { cancelled = true; };
+    const membershipChannel = supabase.channel("memberships-" + authUser.id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members", filter: "user_id=eq." + authUser.id }, loadConversations)
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(membershipChannel); };
   }, [authUser?.id]);
 
   useEffect(() => {
@@ -378,14 +382,60 @@ export default function App() {
       const media = new MediaRecorder(stream);
       const chunks = [];
       media.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-      media.onstop = () => {
+      const recordingConversationId = active?.id;
+      const recordingUserId = authUser?.id;
+      media.onstop = async () => {
         const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        setMessages((items) => [...items, { id: Date.now(), from: "me", type: "audio", url }]);
         stream.getTracks().forEach((track) => track.stop());
+        if (!recordingConversationId || !recordingUserId || !blob.size) return;
+        const extension = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
+        const objectPath = recordingConversationId + "/" + recordingUserId + "/" + Date.now() + "-voice." + extension;
+        setNotice("در حال فرستادن پیام صوتی...");
+        const { error: uploadError } = await supabase.storage.from("chat-media").upload(objectPath, blob, { contentType: blob.type || "audio/webm" });
+        if (uploadError) { setNotice("بارگذاری پیام صوتی انجام نشد: " + uploadError.message); return; }
+        const { error: messageError } = await supabase.from("messages").insert({
+          conversation_id: recordingConversationId, sender_id: recordingUserId,
+          body: "پیام صوتی", message_type: "audio", media_url: objectPath
+        });
+        if (messageError) {
+          await supabase.storage.from("chat-media").remove([objectPath]);
+          setNotice("ثبت پیام صوتی انجام نشد: " + messageError.message);
+          return;
+        }
+        setNotice("");
       };
       recorder.current = media; media.start(); setRecording(true);
     } catch { setNotice("برای ضبط پیام صوتی، اجازهٔ استفاده از میکروفون را بده."); }
+  }
+
+  async function createGroup(event) {
+    event.preventDefault();
+    const title = groupName.trim();
+    if (!authUser?.id || !title) { setNotice("نام گروه را وارد کن."); return; }
+    const requested = groupMember.split(",").map((name) => name.trim().replace(/^@/, "")).filter(Boolean);
+    setNotice("در حال ساخت گروه...");
+    const memberIds = [authUser.id];
+    if (requested.length) {
+      const { data: found, error: lookupError } = await supabase.from("profiles")
+        .select("id,username,display_name").in("username", requested);
+      if (lookupError) { setNotice("جستجوی اعضای گروه انجام نشد: " + lookupError.message); return; }
+      const matched = found || [];
+      const missing = requested.filter((name) => !matched.some((profile) => profile.username === name));
+      if (missing.length) { setNotice("این نام کاربری پیدا نشد: " + missing.join("، ")); return; }
+      for (const profile of matched) if (!memberIds.includes(profile.id)) memberIds.push(profile.id);
+    }
+    const { data: conversation, error: createError } = await supabase.from("conversations")
+      .insert({ title, is_group: true, created_by: authUser.id })
+      .select("id,title,is_group,created_at").single();
+    if (createError) { setNotice("ساخت گروه انجام نشد: " + createError.message); return; }
+    const rows = memberIds.map((user_id) => ({ conversation_id: conversation.id, user_id }));
+    const { error: memberError } = await supabase.from("conversation_members").insert(rows);
+    if (memberError) { setNotice("افزودن اعضا انجام نشد: " + memberError.message); return; }
+    const item = { ...conversation, name: title, photo: "" };
+    setConversations((items) => [item, ...items]);
+    setGroups((items) => [{ id: conversation.id, name: title, members: ["من", ...requested] }, ...items]);
+    setActive(item); setGroupName(""); setGroupMember(""); setNotice("");
+    setPage("chats"); setMobileChatOpen(true);
   }
 
   async function findFriend(event) {
@@ -393,9 +443,20 @@ export default function App() {
     const value = phone.trim().replace(/^@/, "");
     if (!value) { setNotice("نام کاربری دوستت را وارد کن."); return; }
     setNotice("");
-    const { data: friend, error } = await supabase.from("profiles")
-      .select("id,username,display_name").eq("username", value).maybeSingle();
-    if (error || !friend) { setNotice("این نام کاربری پیدا نشد. دوستت باید اول در افغان‌چت حساب بسازد."); return; }
+    let friend = null;
+    if (/^\\+?(93|98)\\d{7,12}$/.test(value.replace(/[\\s()-]/g, ""))) {
+      const phoneValue = value.replace(/[\\s()-]/g, "");
+      const normalizedPhone = phoneValue.startsWith("+") ? phoneValue : "+" + phoneValue;
+      const { data, error } = await supabase.rpc("find_user_by_phone", { p_phone: normalizedPhone });
+      if (error) { setNotice("جستجوی شماره انجام نشد: " + error.message); return; }
+      friend = data?.[0] || null;
+    } else {
+      const { data, error } = await supabase.from("profiles")
+        .select("id,username,display_name").eq("username", value).maybeSingle();
+      if (error) { setNotice("جستجوی دوست انجام نشد: " + error.message); return; }
+      friend = data;
+    }
+    if (!friend) { setNotice("این شماره یا نام کاربری پیدا نشد. دوستت باید حساب افغان چت داشته باشد."); return; }
     if (friend.id === authUser.id) { setNotice("این نام کاربری متعلق به خودت است."); return; }
     const { data: conversation, error: createError } = await supabase.from("conversations")
       .insert({ title: friend.display_name, is_group: false, created_by: authUser.id })
@@ -419,50 +480,57 @@ export default function App() {
   if (!authUser && !guestMode) {
     return (
       <main className="app-shell">
-        <section className="welcome-screen" dir="rtl">
-          <div className="welcome-card">
-            <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
-            <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
-            <h1>ورود به افغان چت</h1>
-            <p className="welcome-intro">با جیمیل و رمز مخصوص افغان چت وارد شو.</p>
-            <div className="welcome-divider"><span>{emailMode === "signup" ? "ساخت حساب تازه" : "ورود با جیمیل"}</span></div>
+        {page === "welcome" ? <section className="wa-auth-screen" dir="rtl">
+          <button className="wa-auth-menu" type="button" aria-label="منوی بیشتر">⋮</button>
+          <div className="wa-auth-center">
+            <div className="wa-auth-illustration"><img src="/afghan-chat-logo.svg" alt="نشان افغان چت"/></div>
+            <h1>به افغان چت خوش آمدید</h1>
+            <p>ارتباط آسان، امن و قابل اعتماد برای دوستان و خانواده</p>
+            <p>با افغان‌ها در هر جا در تماس بمانید</p>
+          </div>
+          <div className="wa-auth-footer">
+            <p>با ادامه دادن، شما با شرایط استفاده و حریم خصوصی افغان چت موافقت می‌کنید.</p>
+            <button type="button" onClick={()=>setPage("phone-login")}>موافقت و ادامه</button>
+            <button className="wa-auth-google" type="button" onClick={loginWithGoogle} disabled={authBusy}>{authBusy ? "در حال اتصال..." : "ورود با گوگل"}</button>
+            <button className="wa-auth-google" type="button" onClick={()=>{setEmailStep("email");setPage("email-login");}}>ورود با جیمیل و رمز افغان چت</button>
+          </div>
+        </section> : page === "phone-login" ? <section className="wa-auth-screen wa-phone-screen" dir="rtl">
+          <button className="wa-auth-menu" type="button" aria-label="منوی بیشتر">⋮</button>
+          <div className="wa-phone-form">
+            <button className="back-link" type="button" onClick={()=>{setPage("welcome");setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>← بازگشت</button>
+            <h1>شماره تلفنتان را وارد کنید</h1>
+            <p>افغان چت شمارهٔ تلفن شما را برای تأیید حساب استفاده می‌کند.</p>
+            <a className="wa-learn-more" href="#phone-help" onClick={e=>{e.preventDefault();setNotice("شمارهٔ تلفن فقط برای تأیید حساب استفاده می‌شود.");}}>بیشتر بدانید</a>
+            <select aria-label="کشور" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>
+              <option value="+93">افغانستان</option><option value="+98">ایران</option><option value="+992">تاجیکستان</option><option value="+998">ازبکستان</option><option value="+90">ترکیه</option>
+            </select>
+            {!phoneOtpSent ? <div className="wa-phone-number"><span>{loginCountry}</span><input aria-label="شماره تلفن" type="tel" inputMode="numeric" autoComplete="tel-national" dir="ltr" value={phoneNumber} onChange={e=>{setPhoneNumber(e.target.value.replace(/[^0-9]/g,""));setNotice("");}} placeholder="شماره تلفن"/></div> : <>
+              <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
+              <input id="login-otp" className="wa-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک"/>
+            </>}
+            <button className="wa-next" type="button" disabled={authBusy || (!phoneOtpSent && phoneNumber.replace(/\D/g,"").length<6) || (phoneOtpSent && phoneOtp.length!==6)} onClick={phoneOtpSent?verifyPhoneCode:sendPhoneCode}>{authBusy?(phoneOtpSent?"در حال بررسی...":"در حال ارسال..."):phoneOtpSent?"تأیید و ادامه":"بعدی"}</button>
+            {phoneOtpSent && <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>}
+            {notice && <p className="notice" role="alert">{notice}</p>}
+          </div>
+        </section> : <section className="wa-auth-screen wa-phone-screen" dir="rtl">
+          <div className="wa-phone-form">
+            <button className="back-link" type="button" onClick={()=>{setPage("welcome");setEmailStep("email");setEmailPassword("");setNotice("");}}>← بازگشت</button>
+            <h1>ورود با جیمیل</h1><p>جیمیل خود و رمز مخصوص افغان چت را وارد کن.</p>
             {emailStep === "email" ? <>
-              <label className="login-label" htmlFor="login-email">اول جیمیل خود را وارد کن</label>
-              <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com" />
-              <button className="phone-signin" type="button" onClick={continueWithEmail}>ادامه</button>
+              <label className="login-label" htmlFor="login-email">نشانی جیمیل</label>
+              <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com"/>
+              <button className="wa-next" type="button" onClick={continueWithEmail}>ادامه</button>
             </> : <>
               <p className="email-confirmed" dir="ltr">{emailAddress}</p>
-              <label className="login-label" htmlFor="login-password">حالا رمز عبور افغان چت را وارد کن</label>
-              <input id="login-password" type="password" dir="ltr" autoComplete={emailMode === "signup" ? "new-password" : "current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد" />
-              <button className="phone-signin" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : emailMode === "signup" ? "ساخت حساب" : "ورود به افغان چت"}</button>
+              <label className="login-label" htmlFor="login-password">رمز عبور افغان چت</label>
+              <input id="login-password" type="password" dir="ltr" autoComplete={emailMode==="signup"?"new-password":"current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد"/>
+              <button className="wa-next" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy?"لطفاً صبر کن...":emailMode==="signup"?"ساخت حساب":"ورود به افغان چت"}</button>
               <button className="back-link" type="button" onClick={()=>{setEmailStep("email");setEmailPassword("");setNotice("");}}>تغییر جیمیل</button>
             </>}
-            <button className="back-link" type="button" onClick={()=>{setEmailMode(emailMode === "signup" ? "signin" : "signup");setEmailStep("email");setEmailPassword("");setNotice("");}}>{emailMode === "signup" ? "از قبل حساب داری؟ وارد شو" : "حساب نداری؟ حساب تازه بساز"}</button>
-            <div className="welcome-divider"><span>یا ورود با شماره تلفن</span></div>
-            <div className="settings-group country-preview">
-              <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره</label>
-              <select id="login-country" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");}}>
-                <option value="+93">🇦🇫 افغانستان +93</option><option value="+98">🇮🇷 ایران +98</option>
-                <option value="+92">پاکستان +92</option><option value="+992">تاجیکستان +992</option>
-                <option value="+998">ازبکستان +998</option><option value="+993">ترکمنستان +993</option>
-                <option value="+90">ترکیه +90</option><option value="+971">امارات +971</option>
-                <option value="+966">عربستان سعودی +966</option><option value="+91">هند +91</option>
-              </select>
-            </div>
-            <label className="login-label" htmlFor="login-phone">شماره تلفن</label>
-            <input id="login-phone" type="tel" dir="ltr" autoComplete="tel-national" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} placeholder="شماره خود را وارد کن" disabled={phoneOtpSent} />
-            {!phoneOtpSent ? <button className="phone-signin" type="button" onClick={sendPhoneCode} disabled={authBusy}>{authBusy ? "در حال ارسال..." : "ارسال کُد تأیید"}</button> : <>
-              <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
-              <input id="login-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک" />
-              <button className="phone-signin" type="button" onClick={verifyPhoneCode} disabled={authBusy}>{authBusy ? "در حال بررسی..." : "تأیید کُد و ورود"}</button>
-              <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>
-            </>}
+            <button className="wa-auth-google" type="button" onClick={()=>{setEmailMode(emailMode==="signup"?"signin":"signup");setEmailStep("email");setEmailPassword("");setNotice("");}}>{emailMode==="signup"?"از قبل حساب داری؟ وارد شو":"حساب نداری؟ حساب تازه بساز"}</button>
             {notice && <p className="notice" role="alert">{notice}</p>}
-            <button className="secondary-action" type="button" onClick={() => { setGuestMode(true); setPage("chats"); setDisplayName("مهمان افغان‌چت"); setConversations(demoChats); setActive(demoChats[0]); setMessages([{id:"demo-1",from:"them",type:"text",text:"به افغان‌چت خوش آمدی! این یک گفتگوی نمایشی است.",createdAt:Date.now()},{id:"demo-2",from:"me",type:"text",text:"سلام، این نسخه آزمایشی است.",createdAt:Date.now()}]); setNotice(""); }}>ورود مهمان و دیدن برنامه</button>
-            <p className="security-note">ورود مهمان فقط برای دیدن محیط برنامه است؛ پیام‌ها و حساب‌های واقعی باز نمی‌شوند.</p>
-            <small>Afghan Chat</small>
           </div>
-        </section>
+        </section>}
       </main>
     );
   }
@@ -619,7 +687,7 @@ export default function App() {
         <div className="settings-group"><h3>کمک و دربارهٔ افغان چت</h3><p>نسخهٔ آزمایشی رابط کاربری افغان چت</p><p>برای پشتیبانی و گزارش مشکل، این بخش در نسخهٔ اصلی تکمیل می‌شود.</p><small>نسخه ۰.۱ · Afghan Chat</small></div>
 
         <p className="demo-warning">تنظیمات حساب و حریم خصوصی فعلاً روی سرور ذخیره نمی‌شوند.</p></section> : null}
-      {page === "groups" && <section className="content-page"><h2>گروه‌ها</h2><p>گروه تازه بساز و اعضا را اضافه کن.</p><form className="friend-form" onSubmit={e=>{e.preventDefault();if(groupName.trim()){setGroups(gs=>[{id:Date.now(),name:groupName.trim(),members:["من",...(groupMember.trim()?[groupMember.trim()]:[])]},...gs]);setGroupName("");setGroupMember("");}}}><label>نام گروه</label><input value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="مثلاً گروه دوستان"/><label>نام یک عضو (اختیاری)</label><input value={groupMember} onChange={e=>setGroupMember(e.target.value)} placeholder="نام دوست"/><button className="send" type="submit">ساخت گروه</button></form><div className="status-list"><h3>گروه‌های من</h3>{groups.map(g=><div className="status-card" key={g.id}><strong>{g.name}</strong><p>{g.members.length} عضو: {g.members.join("، ")}</p><button className="text-action" onClick={()=>setGroups(gs=>gs.filter(x=>x.id!==g.id))}>حذف گروه آزمایشی</button></div>)}</div><p className="demo-warning">ساخت و حذف گروه فعلاً فقط در همین گوشی انجام می‌شود.</p></section>}
+      {page === "groups" && <section className="content-page"><h2>گروه‌ها</h2><p>گروه تازه بساز و اعضا را اضافه کن.</p><form className="friend-form" onSubmit={createGroup}><label>نام گروه</label><input value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="مثلاً گروه دوستان"/><label>نام کاربری اعضا (با ویرگول جدا کن، اختیاری)</label><input dir="ltr" value={groupMember} onChange={e=>setGroupMember(e.target.value)} placeholder="username1, username2"/><button className="send" type="submit">ساخت گروه</button></form><div className="status-list"><h3>گروه‌های من</h3>{groups.map(g=><div className="status-card" key={g.id}><strong>{g.name}</strong><p>{g.members.length} عضو: {g.members.join("، ")}</p><button className="text-action" onClick={()=>setGroups(gs=>gs.filter(x=>x.id!==g.id))}>حذف گروه آزمایشی</button></div>)}</div><p className="demo-warning">گروه و اعضای آن در پایگاه داده ذخیره می‌شوند و برای اعضا همگام می‌گردند.</p></section>}
       {page === "account" && <section className="content-page"><h2>حساب من</h2><p>{authUser?.email || "حساب افغان‌چت"}</p><div className="settings-group"><p>ورود با Supabase فعال است. ورود با شماره تلفن پس از تنظیم سرویس پیامک فعال می‌شود.</p><button className="send" type="button" onClick={async()=>{await supabase.auth.signOut();setPage("welcome");}}>خروج از حساب</button></div></section>}
       {page === "more" && <section className="content-page more-page"><h2>بیشتر</h2><p>بخش‌های دیگر افغان چت</p><div className="more-menu">
         <button onClick={()=>setPage("friends")}><span>👥</span><strong>دوستان</strong><small>یافتن و افزودن دوست</small><b>‹</b></button>
