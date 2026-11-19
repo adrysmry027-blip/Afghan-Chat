@@ -74,11 +74,28 @@ export default function App() {
     const fullPhone = `${loginCountry}${digits}`;
     setAuthBusy(true);
     try {
-      if (!recaptcha.current) recaptcha.current = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
-      confirmation.current = await signInWithPhoneNumber(auth, fullPhone, recaptcha.current);
-      setLoginStep(true); setNotice("کد تأیید به شماره‌ات پیامک شد.");
-    } catch (error) { setNotice(`ارسال کد انجام نشد: ${error.message}`); recaptcha.current?.clear(); recaptcha.current = null; }
-    finally { setAuthBusy(false); }
+      // Dispose of any previous widget before binding a new verifier to the same DOM element.
+      if (recaptcha.current) {
+        recaptcha.current.clear();
+        recaptcha.current = null;
+      }
+      const recaptchaContainer = document.getElementById("recaptcha-container");
+      if (!recaptchaContainer) throw new Error("بخش تأیید امنیتی پیدا نشد. صفحه را دوباره باز کن.");
+      recaptchaContainer.replaceChildren();
+      const verifier = new RecaptchaVerifier(auth, recaptchaContainer, { size: "invisible" });
+      recaptcha.current = verifier;
+      await verifier.render();
+      confirmation.current = await signInWithPhoneNumber(auth, fullPhone, verifier);
+      setLoginStep(true);
+      setNotice("کد تأیید به شماره‌ات پیامک شد.");
+    } catch (error) {
+      confirmation.current = null;
+      try { recaptcha.current?.clear(); } catch {}
+      recaptcha.current = null;
+      const recaptchaContainer = document.getElementById("recaptcha-container");
+      if (recaptchaContainer) recaptchaContainer.replaceChildren();
+      setNotice(`ارسال کد انجام نشد: ${error.message}`);
+    } finally { setAuthBusy(false); }
   }
 
   async function verifyPhoneCode() {
