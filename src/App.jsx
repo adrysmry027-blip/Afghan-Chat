@@ -43,9 +43,10 @@ export default function App() {
   const [statusMedia,setStatusMedia] = useState(null);
   const [statusAudience,setStatusAudience] = useState("همهٔ دوستان");
   const [statusReplies,setStatusReplies] = useState({});
-  const [loginEmail,setLoginEmail] = useState("");
-  const [loginPassword,setLoginPassword] = useState("");
   const [loginCountry,setLoginCountry] = useState("+93");
+  const [phoneNumber,setPhoneNumber] = useState("");
+  const [phoneOtp,setPhoneOtp] = useState("");
+  const [phoneOtpSent,setPhoneOtpSent] = useState(false);
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
   const statusPicker = useRef(null);
@@ -138,37 +139,38 @@ export default function App() {
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [authUser?.id, active?.id]);
 
-  async function loginWithAppPassword() {
-    const email = loginEmail.trim();
-    const password = loginPassword;
-    if (!email) { setNotice("اول نشانی جیمیل خود را وارد کن."); return; }
-    if (password.length < 6) { setNotice("رمز باید دست‌کم ۶ حرف یا عدد داشته باشد."); return; }
+  async function sendPhoneCode() {
+    const digits = phoneNumber.replace(/[^0-9]/g, "");
+    if (digits.length < 6) { setNotice("شماره تلفن را درست وارد کن."); return; }
+    const fullPhone = loginCountry + digits.replace(/^0+/, "");
     setAuthBusy(true);
     setNotice("");
     try {
-      let result = await supabase.auth.signInWithPassword({ email, password });
-      if (result.error && /invalid login credentials/i.test(result.error.message)) {
-        const signup = await supabase.auth.signUp({ email, password, options: { data: { display_name: email.split("@")[0] } } });
-        if (signup.error) throw signup.error;
-        if (!signup.data.session) {
-          setNotice("حساب ساخته شد. ایمیل خود را برای تأیید باز کن، سپس وارد شو.");
-          return;
-        }
-        result = signup;
-      } else if (result.error) {
-        throw result.error;
-      }
-      const user = result.data.user;
-      if (user) {
-        await supabase.from("profiles").upsert({
-          id: user.id,
-          username: "user_" + user.id.replace(/-/g, "").slice(0, 12),
-          display_name: user.user_metadata?.display_name || email.split("@")[0]
-        }, { onConflict: "id", ignoreDuplicates: true });
-      }
+      const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+      if (error) throw error;
+      setPhoneOtpSent(true);
+      setNotice("کُد تأیید ارسال شد. کُد پیامک را وارد کن.");
+    } catch (error) {
+      setNotice("ارسال کُد انجام نشد: " + (error.message || "تنظیمات پیامک هنوز کامل نیست."));
+    } finally { setAuthBusy(false); }
+  }
+
+  async function verifyPhoneCode() {
+    const digits = phoneNumber.replace(/[^0-9]/g, "");
+    const fullPhone = loginCountry + digits.replace(/^0+/, "");
+    if (!/^\\d{6}$/.test(phoneOtp.trim())) { setNotice("کُد باید ۶ رقم باشد."); return; }
+    setAuthBusy(true);
+    setNotice("");
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        phone: fullPhone,
+        token: phoneOtp.trim(),
+        type: "sms"
+      });
+      if (error) throw error;
       setNotice("");
     } catch (error) {
-      setNotice(error.message || "ورود انجام نشد؛ ایمیل و رمز را بررسی کن.");
+      setNotice("کُد درست نیست یا اعتبارش تمام شده است: " + error.message);
     } finally { setAuthBusy(false); }
   }
 
@@ -257,7 +259,7 @@ export default function App() {
   }
 
 
-  // Never render chats, settings, or navigation until Firebase confirms a signed-in user.
+  // Never render chats, settings, or navigation until Supabase confirms a signed-in user.
   if (!authUser) {
     return (
       <main className="app-shell">
@@ -266,26 +268,29 @@ export default function App() {
             <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
             <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
             <h1>ورود به افغان چت</h1>
-            <p className="welcome-intro">جیمیل و رمز جداگانهٔ افغان‌چت خود را وارد کن.</p>
-            <label className="login-label" htmlFor="login-email">جیمیل</label>
-            <input id="login-email" type="email" dir="ltr" autoComplete="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} placeholder="name@gmail.com" />
-            <label className="login-label" htmlFor="login-password">رمز عبور</label>
-            <input id="login-password" type="password" dir="ltr" autoComplete="current-password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} placeholder="رمز دلخواه افغان‌چت" />
-            <button className="phone-signin" type="button" onClick={loginWithAppPassword} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ورود به افغان‌چت"}</button>
-            <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}><span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ورود با حساب گوگل"}</span></button>
+            <p className="welcome-intro">برای ورود، شماره را تأیید کن یا از حساب گوگل استفاده کن.</p>
+            <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}><span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ادامه با حساب گوگل"}</span></button>
+            <div className="welcome-divider"><span>یا ورود با شماره تلفن</span></div>
             <div className="settings-group country-preview">
-              <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره (فعلاً غیرفعال)</label>
-              <select id="login-country" value={loginCountry} onChange={e=>setLoginCountry(e.target.value)}>
-                <option value="+93">افغانستان +93</option><option value="+98">ایران +98</option>
+              <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره</label>
+              <select id="login-country" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");}}>
+                <option value="+93">🇦🇫 افغانستان +93</option><option value="+98">🇮🇷 ایران +98</option>
                 <option value="+92">پاکستان +92</option><option value="+992">تاجیکستان +992</option>
                 <option value="+998">ازبکستان +998</option><option value="+993">ترکمنستان +993</option>
                 <option value="+90">ترکیه +90</option><option value="+971">امارات +971</option>
                 <option value="+966">عربستان سعودی +966</option><option value="+91">هند +91</option>
               </select>
-              <p className="setting-hint">ورود با شماره تلفن هنوز فعال نیست.</p>
             </div>
+            <label className="login-label" htmlFor="login-phone">شماره تلفن</label>
+            <input id="login-phone" type="tel" dir="ltr" autoComplete="tel-national" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} placeholder="شماره خود را وارد کن" disabled={phoneOtpSent} />
+            {!phoneOtpSent ? <button className="phone-signin" type="button" onClick={sendPhoneCode} disabled={authBusy}>{authBusy ? "در حال ارسال..." : "ارسال کُد تأیید"}</button> : <>
+              <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
+              <input id="login-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک" />
+              <button className="phone-signin" type="button" onClick={verifyPhoneCode} disabled={authBusy}>{authBusy ? "در حال بررسی..." : "تأیید کُد و ورود"}</button>
+              <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>
+            </>}
             {notice && <p className="notice" role="alert">{notice}</p>}
-            <p className="security-note">این رمز فقط برای حساب افغان‌چت است و با رمز جیمیل فرق دارد. بار اول حساب ساخته می‌شود و دفعات بعد با همان رمز وارد می‌شوی.</p>
+            <p className="security-note">بدون تأیید کُد پیامک یا تأیید حساب گوگل، ورود انجام نمی‌شود. ورود آزمایشی با شماره‌های ثابت فقط پس از ثبت همان شماره‌ها و کُدها در تنظیمات امن Supabase ممکن است.</p>
             <small>Afghan Chat</small>
           </div>
         </section>
