@@ -52,6 +52,7 @@ export default function App() {
   const [emailOtpSent,setEmailOtpSent] = useState(false);
   const [emailPassword,setEmailPassword] = useState("");
   const [emailMode,setEmailMode] = useState("signin");
+  const [emailStep,setEmailStep] = useState("email");
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
   const [profileLoading,setProfileLoading] = useState(false);
@@ -204,6 +205,17 @@ export default function App() {
       setPage("chats");
     }
     setAuthBusy(false);
+  }
+
+  function continueWithEmail() {
+    const email = emailAddress.trim().toLowerCase();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      setNotice("نشانی جیمیل را درست وارد کن.");
+      return;
+    }
+    setEmailAddress(email);
+    setEmailStep("password");
+    setNotice("");
   }
 
   async function submitEmailPassword() {
@@ -389,12 +401,18 @@ export default function App() {
             <h1>ورود به افغان چت</h1>
             <p className="welcome-intro">با جیمیل و رمز مخصوص افغان چت وارد شو.</p>
             <div className="welcome-divider"><span>{emailMode === "signup" ? "ساخت حساب تازه" : "ورود با جیمیل"}</span></div>
-            <label className="login-label" htmlFor="login-email">جیمیل خود را وارد کن</label>
-            <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com" />
-            <label className="login-label" htmlFor="login-password">رمز عبور افغان چت</label>
-            <input id="login-password" type="password" dir="ltr" autoComplete={emailMode === "signup" ? "new-password" : "current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد" />
-            <button className="phone-signin" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : emailMode === "signup" ? "ساخت حساب" : "ورود به افغان چت"}</button>
-            <button className="back-link" type="button" onClick={()=>{setEmailMode(emailMode === "signup" ? "signin" : "signup");setNotice("");}}>{emailMode === "signup" ? "از قبل حساب داری؟ وارد شو" : "حساب نداری؟ حساب تازه بساز"}</button>
+            {emailStep === "email" ? <>
+              <label className="login-label" htmlFor="login-email">اول جیمیل خود را وارد کن</label>
+              <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com" />
+              <button className="phone-signin" type="button" onClick={continueWithEmail}>ادامه</button>
+            </> : <>
+              <p className="email-confirmed" dir="ltr">{emailAddress}</p>
+              <label className="login-label" htmlFor="login-password">حالا رمز عبور افغان چت را وارد کن</label>
+              <input id="login-password" type="password" dir="ltr" autoComplete={emailMode === "signup" ? "new-password" : "current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد" />
+              <button className="phone-signin" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : emailMode === "signup" ? "ساخت حساب" : "ورود به افغان چت"}</button>
+              <button className="back-link" type="button" onClick={()=>{setEmailStep("email");setEmailPassword("");setNotice("");}}>تغییر جیمیل</button>
+            </>}
+            <button className="back-link" type="button" onClick={()=>{setEmailMode(emailMode === "signup" ? "signin" : "signup");setEmailStep("email");setEmailPassword("");setNotice("");}}>{emailMode === "signup" ? "از قبل حساب داری؟ وارد شو" : "حساب نداری؟ حساب تازه بساز"}</button>
             <div className="welcome-divider"><span>یا ورود با شماره تلفن</span></div>
             <div className="settings-group country-preview">
               <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره</label>
