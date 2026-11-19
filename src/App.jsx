@@ -418,6 +418,10 @@ export default function App() {
     return (
       <main className="app-shell">
         <section className="welcome-screen" dir="rtl">
+          <div className="login-showcase">
+            <img src="/afghan-chat-hero.svg" alt="افغان چت؛ پیام‌رسان دوستان و خانواده" />
+            <div className="showcase-caption"><span>🇦🇫</span><strong>افغان چت</strong><b>Afghan Chat</b><small>ارتباط امن، سریع و آسان با دوستان و خانواده</small></div>
+          </div>
           <div className="welcome-card login-card">
             <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
             <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
