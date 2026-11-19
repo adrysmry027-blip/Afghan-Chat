@@ -172,6 +172,23 @@ export default function App() {
     setNotice("");
   }
 
+  async function saveProfile() {
+    if (!authUser?.id) return;
+    const cleanName = displayName.trim();
+    if (!cleanName) { setNotice("نام نمایشی را وارد کن."); return; }
+    setAuthBusy(true);
+    setNotice("");
+    const { error } = await supabase.from("profiles").upsert({
+      id: authUser.id,
+      display_name: cleanName,
+      about: about.trim(),
+      updated_at: new Date().toISOString()
+    });
+    if (error) setNotice("ذخیره پروفایل انجام نشد: " + error.message);
+    else setNotice("پروفایل با موفقیت ذخیره شد.");
+    setAuthBusy(false);
+  }
+
   async function sendPhoneCode() {
     const digits = phoneNumber.replace(/[^0-9]/g, "");
     if (digits.length < 6) { setNotice("شماره تلفن را درست وارد کن."); return; }
@@ -397,7 +414,7 @@ export default function App() {
         {notice && <p className="notice">{notice}</p>}
         <p className="demo-warning">برای پیدا کردن دوست، نام کاربری او را از خودش بگیر.</p>
       </section> : page === "settings" ? <section className="content-page settings-page"><h2>تنظیمات</h2><p>حساب و برنامهٔ افغان چت را مدیریت کن.</p>
-        <div className="settings-group"><h3>پروفایل من</h3><label>نام نمایشی<input value={displayName} onChange={e=>setDisplayName(e.target.value)} /></label><label>دربارهٔ من<input value={about} onChange={e=>setAbout(e.target.value)} /></label><small>نام کاربری تو: @{username || "در حال بارگذاری"} — آن را برای افزودن دوست به او بده.</small></div>
+        <div className="settings-group"><h3>پروفایل من</h3><label>نام نمایشی<input value={displayName} onChange={e=>setDisplayName(e.target.value)} /></label><label>دربارهٔ من<input value={about} onChange={e=>setAbout(e.target.value)} /></label><small>نام کاربری تو: @{username || "در حال بارگذاری"} — آن را برای افزودن دوست به او بده.</small><button className="secondary-action" type="button" onClick={saveProfile} disabled={authBusy}>{authBusy ? "در حال ذخیره..." : "ذخیره پروفایل"}</button></div>
         <div className="settings-group"><h3>حریم خصوصی</h3>
           <label className="setting-toggle"><span>نمایش آخرین بازدید</span><input type="checkbox" checked={privacy.lastSeen} onChange={e=>setPrivacy(p=>({...p,lastSeen:e.target.checked}))}/></label>
           <label className="setting-toggle"><span>نمایش عکس پروفایل</span><input type="checkbox" checked={privacy.photo} onChange={e=>setPrivacy(p=>({...p,photo:e.target.checked}))}/></label>
