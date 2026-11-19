@@ -172,6 +172,20 @@ export default function App() {
     setNotice("");
   }
 
+  async function saveProfile() {
+    if (!authUser?.id) return;
+    const cleanName = displayName.trim();
+    if (!cleanName) { setNotice("نام نمایشی را وارد کن."); return; }
+    const { error } = await supabase.from("profiles").update({
+      display_name: cleanName,
+      about: about.trim(),
+      updated_at: new Date().toISOString()
+    }).eq("id", authUser.id);
+    if (error) { setNotice("ذخیرهٔ پروفایل انجام نشد: " + error.message); return; }
+    setDisplayName(cleanName);
+    setNotice("پروفایل با موفقیت ذخیره شد.");
+  }
+
   async function sendPhoneCode() {
     const digits = phoneNumber.replace(/[^0-9]/g, "");
     if (digits.length < 6) { setNotice("شماره تلفن را درست وارد کن."); return; }
@@ -281,12 +295,27 @@ export default function App() {
 
   async function findFriend(event) {
     event.preventDefault();
-    const value = phone.trim().replace(/^@/, "");
-    if (!value) { setNotice("نام کاربری دوستت را وارد کن."); return; }
+    const value = phone.trim();
+    if (!value) { setNotice("شماره تلفن یا نام کاربری دوستت را وارد کن."); return; }
     setNotice("");
-    const { data: friend, error } = await supabase.from("profiles")
-      .select("id,username,display_name").eq("username", value).maybeSingle();
-    if (error || !friend) { setNotice("این نام کاربری پیدا نشد. دوستت باید اول در افغان‌چت حساب بسازد."); return; }
+    const normalizedPhone = value.replace(/[\\s()-]/g, "");
+    let friend = null;
+    let lookupError = null;
+    if (/^\\+(93|98)[0-9]{7,12}$/.test(normalizedPhone)) {
+      const { data, error } = await supabase.rpc("find_user_by_phone", { p_phone: normalizedPhone });
+      lookupError = error;
+      friend = Array.isArray(data) ? data[0] : data;
+    } else {
+      const usernameValue = value.replace(/^@/, "");
+      const { data, error } = await supabase.from("profiles")
+        .select("id,username,display_name").eq("username", usernameValue).maybeSingle();
+      lookupError = error;
+      friend = data;
+    }
+    if (lookupError || !friend) {
+      setNotice("این شماره یا نام کاربری پیدا نشد. دوستت باید اول در افغان‌چت حساب ساخته و شماره‌اش را تأیید کرده باشد.");
+      return;
+    }
     if (friend.id === authUser.id) { setNotice("این نام کاربری متعلق به خودت است."); return; }
     const { data: conversation, error: createError } = await supabase.from("conversations")
       .insert({ title: friend.display_name, is_group: false, created_by: authUser.id })
@@ -392,12 +421,12 @@ export default function App() {
           <h3>وضعیت دوستان</h3>{[{name:"احمد",text:"الحمدلله برای یک روز تازه"},{name:"فاطمه",text:"یک روز زیبا و پر از امید 🌿"}].map((s,i)=><div className="status-card" key={s.name}><b>{s.name}</b><p>{s.text}</p><div className="status-tools"><button onClick={()=>setStatusReplies(r=>({...r,[s.name]:"❤️"}))}>❤️ واکنش</button><button onClick={()=>setStatusReplies(r=>({...r,[s.name]:r[s.name]==="پاسخ خصوصی"?"":"پاسخ خصوصی"}))}>پاسخ خصوصی</button></div>{statusReplies[s.name]&&<small>{statusReplies[s.name]} · فقط برای صاحب وضعیت</small>}</div>)}</div>
         <p className="demo-warning">وضعیت‌ها و واکنش‌ها آزمایشی‌اند و هنوز برای دیگران فرستاده نمی‌شوند.</p></section> : page === "calls" ? <section className="content-page"><h2>تماس‌ها</h2><p>تماس‌های صوتی و تصویری اخیر.</p><div className="settings-list"><div className="call-row"><span>احمد · تماس صوتی</span><small>امروز، ۱۰:۳۰</small><button onClick={()=>openCall("احمد", "voice")}>☎ آماده‌سازی</button></div><div className="call-row"><span>فاطمه · تماس تصویری</span><small>دیروز، ۱۸:۴۵</small><button onClick={()=>openCall("فاطمه", "video")}>▣ آماده‌سازی</button></div></div>{notice && <p className="notice">{notice}</p>}<p className="demo-warning">فهرست تماس‌ها نمونه است؛ تماس واقعی هنوز فعال نیست.</p></section> : page === "friends" ? <section className="content-page">
         <h2>افزودن دوستان</h2><p>نام کاربری دوستت را وارد کن تا حساب افغان‌چت او پیدا شود.</p>
-        <form className="friend-form" onSubmit={findFriend}><label htmlFor="friend-phone">نام کاربری دوست</label><input id="friend-phone" dir="ltr" value={phone} onChange={(e) => {setPhone(e.target.value);setNotice("");}} placeholder="user_123456789abc" /><button className="send" type="submit">جست‌وجوی دوست</button></form>
+        <form className="friend-form" onSubmit={findFriend}><label htmlFor="friend-phone">شمارهٔ تلفن یا نام کاربری دوست</label><input id="friend-phone" dir="ltr" value={phone} onChange={(e) => {setPhone(e.target.value);setNotice("");}} placeholder="+937XXXXXXXXX یا نام‌کاربری" /><button className="send" type="submit">جست‌وجوی دوست</button></form>
         <div className="help-card"><strong>دوستت افغان چت ندارد؟</strong><p>می‌توانی بعداً لینک دعوت را برایش بفرستی.</p></div>
         {notice && <p className="notice">{notice}</p>}
         <p className="demo-warning">برای پیدا کردن دوست، نام کاربری او را از خودش بگیر.</p>
       </section> : page === "settings" ? <section className="content-page settings-page"><h2>تنظیمات</h2><p>حساب و برنامهٔ افغان چت را مدیریت کن.</p>
-        <div className="settings-group"><h3>پروفایل من</h3><label>نام نمایشی<input value={displayName} onChange={e=>setDisplayName(e.target.value)} /></label><label>دربارهٔ من<input value={about} onChange={e=>setAbout(e.target.value)} /></label><small>نام کاربری تو: @{username || "در حال بارگذاری"} — آن را برای افزودن دوست به او بده.</small></div>
+        <div className="settings-group"><h3>پروفایل من</h3><label>نام نمایشی<input value={displayName} onChange={e=>setDisplayName(e.target.value)} /></label><label>دربارهٔ من<input value={about} onChange={e=>setAbout(e.target.value)} /></label><small>نام کاربری تو: @{username || "در حال بارگذاری"} — آن را برای افزودن دوست به او بده.</small><button className="send" type="button" onClick={saveProfile}>ذخیرهٔ تغییرات پروفایل</button>{notice && <p className="notice">{notice}</p>}</div>
         <div className="settings-group"><h3>حریم خصوصی</h3>
           <label className="setting-toggle"><span>نمایش آخرین بازدید</span><input type="checkbox" checked={privacy.lastSeen} onChange={e=>setPrivacy(p=>({...p,lastSeen:e.target.checked}))}/></label>
           <label className="setting-toggle"><span>نمایش عکس پروفایل</span><input type="checkbox" checked={privacy.photo} onChange={e=>setPrivacy(p=>({...p,photo:e.target.checked}))}/></label>
