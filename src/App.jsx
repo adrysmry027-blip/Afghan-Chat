@@ -283,10 +283,37 @@ export default function App() {
       const media = new MediaRecorder(stream);
       const chunks = [];
       media.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-      media.onstop = () => {
+      media.onstop = async () => {
         const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        setMessages((items) => [...items, { id: Date.now(), from: "me", type: "audio", url }]);
+        if (!authUser?.id || !active?.id || !blob.size) {
+          setNotice("پیام صوتی ذخیره نشد؛ گفتگو یا فایل صوتی در دسترس نیست.");
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        const objectPath = active.id + "/" + authUser.id + "/" + Date.now() + "-voice.webm";
+        setNotice("در حال ذخیره پیام صوتی...");
+        const { error: uploadError } = await supabase.storage.from("chat-media").upload(objectPath, blob, {
+          contentType: blob.type || "audio/webm",
+          upsert: false
+        });
+        if (uploadError) {
+          setNotice("ذخیره پیام صوتی انجام نشد: " + uploadError.message);
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        const { error: messageError } = await supabase.from("messages").insert({
+          conversation_id: active.id,
+          sender_id: authUser.id,
+          body: "پیام صوتی",
+          message_type: "audio",
+          media_url: objectPath
+        });
+        if (messageError) {
+          await supabase.storage.from("chat-media").remove([objectPath]);
+          setNotice("ثبت پیام صوتی انجام نشد: " + messageError.message);
+        } else {
+          setNotice("");
+        }
         stream.getTracks().forEach((track) => track.stop());
       };
       recorder.current = media; media.start(); setRecording(true);
