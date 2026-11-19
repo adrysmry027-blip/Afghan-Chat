@@ -519,7 +519,7 @@ export default function App() {
             <div><h1>افغان چت</h1></div>
           </div>
           <div className="brand-actions">
-            <button className="top-icon top-camera" type="button" aria-label="افزودن وضعیت" title="دوربین" onClick={()=>statusPicker.current?.click()}>▣</button>
+            <button className="top-icon top-camera" type="button" aria-label="افزودن وضعیت" title="دوربین" onClick={()=>setPage("status")}>▣</button>
             <button className="top-icon top-more" type="button" aria-label="منوی بیشتر" aria-expanded={moreOpen} onClick={()=>setMoreOpen(v=>!v)}>⋮</button>
           </div>
           {moreOpen && <div className="top-menu" role="menu">
