@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { onValue, push, ref } from "firebase/database";
-import { auth, database, googleProvider } from "./firebase";
+import { supabase } from "./supabase";
 import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
 
@@ -17,7 +15,8 @@ export default function App() {
   const [authUser, setAuthUser] = useState(null);
   const [authBusy, setAuthBusy] = useState(false);
 
-  const [active, setActive] = useState(demoChats[0]);
+  const [active, setActive] = useState({ id: null, name: "گفتگوی تازه", photo: "" });
+  const [conversations, setConversations] = useState([]);
   const [message, setMessage] = useState("");
   const [phone, setPhone] = useState("");
   const [messages, setMessages] = useState([]);
@@ -51,72 +50,123 @@ export default function App() {
   const statusPicker = useRef(null);
   const avatarPicker = useRef(null);
 
-  useEffect(() => onAuthStateChanged(auth, (user) => {
-    setAuthUser(user);
-    setLoggedIn(Boolean(user));
-    if (user) { setDisplayName(user.displayName || user.phoneNumber || "کاربر افغان چت"); setPage("chats"); }
-  }), []);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const user = session?.user ?? null;
+      setAuthUser(user);
+      setLoggedIn(Boolean(user));
+      if (user) {
+        setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "کاربر افغان چت");
+        setPage("chats");
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ?? null;
+      setAuthUser(user);
+      setLoggedIn(Boolean(user));
+      if (user) {
+        setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "کاربر افغان چت");
+        setPage("chats");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
-    if (!authUser?.uid || !active?.id) { setMessages([]); return; }
-    const messagesRef = ref(database, `users/${authUser.uid}/chats/${active.id}/messages`);
-    const unsubscribe = onValue(messagesRef, (snapshot) => {
-      const value = snapshot.val() || {};
-      const items = Object.entries(value).map(([id, item]) => ({ id, ...item }));
-      items.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      setMessages(items);
-    }, (error) => setNotice("خواندن پیام‌ها انجام نشد؛ قوانین دیتابیس را بررسی کن."));
-    return unsubscribe;
-  }, [authUser?.uid, active?.id]);
+    if (!authUser?.id) { setConversations([]); setMessages([]); return; }
+    let cancelled = false;
+    async function loadConversations() {
+      const { data, error } = await supabase
+        .from("conversation_members")
+        .select("conversation_id, conversations(id,title,is_group,created_at)")
+        .eq("user_id", authUser.id);
+      if (error) { setNotice("بارگذاری گفتگوها انجام نشد: " + error.message); return; }
+      const items = [];
+      for (const row of data || []) {
+        const conversation = row.conversations;
+        if (!conversation) continue;
+        const { data: members } = await supabase
+          .from("conversation_members").select("user_id")
+          .eq("conversation_id", conversation.id);
+        const otherId = (members || []).find((member) => member.user_id !== authUser.id)?.user_id;
+        let name = conversation.title || "گفتگوی تازه";
+        if (otherId) {
+          const { data: profile } = await supabase.from("profiles")
+            .select("display_name").eq("id", otherId).maybeSingle();
+          if (profile?.display_name) name = profile.display_name;
+        }
+        items.push({ ...conversation, name, photo: "" });
+      }
+      if (cancelled) return;
+      setConversations(items);
+      setActive((current) => items.find((item) => item.id === current?.id) || items[0] || { id: null, name: "هنوز گفتگویی نداری", photo: "" });
+    }
+    loadConversations();
+    return () => { cancelled = true; };
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    if (!authUser?.id || !active?.id) { setMessages([]); return; }
+    let cancelled = false;
+    const loadMessages = async () => {
+      const { data, error } = await supabase.from("messages").select("*")
+        .eq("conversation_id", active.id).order("created_at", { ascending: true });
+      if (error) { setNotice("خواندن پیام‌ها انجام نشد: " + error.message); return; }
+      if (!cancelled) setMessages((data || []).map((item) => ({
+        id: item.id, from: item.sender_id === authUser.id ? "me" : "them",
+        text: item.body, type: item.message_type, url: item.media_url,
+        createdAt: new Date(item.created_at).getTime()
+      })));
+    };
+    loadMessages();
+    const channel = supabase.channel("messages-" + active.id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: "conversation_id=eq." + active.id }, loadMessages)
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+  }, [authUser?.id, active?.id]);
 
   async function loginWithAppPassword() {
     const email = loginEmail.trim();
     const password = loginPassword;
     if (!email) { setNotice("اول نشانی جیمیل خود را وارد کن."); return; }
-    if (password.length < 6) { setNotice("رمز افغان‌چت باید دست‌کم ۶ حرف یا عدد داشته باشد."); return; }
+    if (password.length < 6) { setNotice("رمز باید دست‌کم ۶ حرف یا عدد داشته باشد."); return; }
     setAuthBusy(true);
+    setNotice("");
     try {
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch (error) {
-        if (error.code === "auth/user-not-found") {
-          await createUserWithEmailAndPassword(auth, email, password);
-        } else {
-          throw error;
+      let result = await supabase.auth.signInWithPassword({ email, password });
+      if (result.error && /invalid login credentials/i.test(result.error.message)) {
+        const signup = await supabase.auth.signUp({ email, password, options: { data: { display_name: email.split("@")[0] } } });
+        if (signup.error) throw signup.error;
+        if (!signup.data.session) {
+          setNotice("حساب ساخته شد. ایمیل خود را برای تأیید باز کن، سپس وارد شو.");
+          return;
         }
+        result = signup;
+      } else if (result.error) {
+        throw result.error;
+      }
+      const user = result.data.user;
+      if (user) {
+        await supabase.from("profiles").upsert({
+          id: user.id,
+          username: "user_" + user.id.replace(/-/g, "").slice(0, 12),
+          display_name: user.user_metadata?.display_name || email.split("@")[0]
+        }, { onConflict: "id", ignoreDuplicates: true });
       }
       setNotice("");
     } catch (error) {
-      const errors = {
-        "auth/email-already-in-use": "این جیمیل قبلاً ثبت شده است؛ رمز درست را وارد کن.",
-        "auth/wrong-password": "رمز افغان‌چت درست نیست.",
-        "auth/invalid-credential": "جیمیل یا رمز افغان‌چت درست نیست.",
-        "auth/invalid-email": "نشانی جیمیل درست نیست.",
-        "auth/weak-password": "رمز باید دست‌کم ۶ حرف یا عدد داشته باشد.",
-        "auth/operation-not-allowed": "ورود با جیمیل و رمز هنوز در تنظیمات Firebase فعال نشده است.",
-        "auth/network-request-failed": "اتصال اینترنت برقرار نیست؛ اینترنت را بررسی کن."
-      };
-      setNotice(errors[error.code] || "ورود انجام نشد. تنظیمات حساب را بررسی کن.");
+      setNotice(error.message || "ورود انجام نشد؛ ایمیل و رمز را بررسی کن.");
     } finally { setAuthBusy(false); }
   }
 
   async function loginWithGoogle() {
     setAuthBusy(true);
     setNotice("");
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      const errors = {
-        "auth/popup-closed-by-user": "صفحهٔ ورود گوگل بسته شد؛ دوباره تلاش کن.",
-        "auth/popup-blocked": "مرورگر پنجرهٔ ورود گوگل را بسته است؛ اجازهٔ بازشدن پنجره را بده.",
-        "auth/operation-not-allowed": "ورود با Google در Firebase فعال نشده است.",
-        "auth/unauthorized-domain": "دامنهٔ برنامه در تنظیمات مجاز Firebase ثبت نشده است.",
-        "auth/network-request-failed": "اتصال اینترنت برقرار نیست؛ اینترنت را بررسی کن."
-      };
-      setNotice(errors[error.code] || "ورود با گوگل انجام نشد. تنظیمات Firebase و اتصال اینترنت را بررسی کن.");
-    } finally {
-      setAuthBusy(false);
-    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) { setNotice("ورود گوگل هنوز در تنظیمات Supabase فعال نشده است: " + error.message); setAuthBusy(false); }
   }
 
   function openCall(contact, media) {
@@ -126,15 +176,18 @@ export default function App() {
   async function sendMessage(event) {
     event.preventDefault();
     const value = message.trim();
-    if (!value || !authUser?.uid || !active?.id) return;
-    try {
-      const messagesRef = ref(database, `users/${authUser.uid}/chats/${active.id}/messages`);
-      await push(messagesRef, { from: "me", text: value, createdAt: Date.now() });
-      setMessage("");
-      setNotice("");
-    } catch (error) {
-      setNotice("پیام ذخیره نشد. اتصال اینترنت و قوانین Realtime Database را بررسی کن.");
-    }
+    if (!value || !authUser?.id || !active?.id) return;
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: active.id, sender_id: authUser.id, body: value, message_type: "text"
+    });
+    if (error) { setNotice("پیام فرستاده نشد: " + error.message); return; }
+    setMessage("");
+    setNotice("");
+  }
+
+  async function deleteMessage(id) {
+    const { error } = await supabase.from("messages").delete().eq("id", id);
+    if (error) setNotice("حذف پیام انجام نشد: " + error.message);
   }
 
   function addAttachment(event) {
@@ -164,12 +217,32 @@ export default function App() {
     } catch { setNotice("برای ضبط پیام صوتی، اجازهٔ استفاده از میکروفون را بده."); }
   }
 
-  function findFriend(event) {
+  async function findFriend(event) {
     event.preventDefault();
-    const value = phone.trim();
-    if (!value) { setNotice("لطفاً شماره را با کود کشور وارد کن؛ مانند +93700000000"); return; }
-    setNotice("جست‌وجوی واقعی شماره هنوز به سرور و پایگاه اطلاعاتی وصل نشده است. این بخش فعلاً ظاهر و فرم آزمایشی دارد.");
+    const value = phone.trim().replace(/^@/, "");
+    if (!value) { setNotice("نام کاربری دوستت را وارد کن."); return; }
+    setNotice("");
+    const { data: friend, error } = await supabase.from("profiles")
+      .select("id,username,display_name").eq("username", value).maybeSingle();
+    if (error || !friend) { setNotice("این نام کاربری پیدا نشد. دوستت باید اول در افغان‌چت حساب بسازد."); return; }
+    if (friend.id === authUser.id) { setNotice("این نام کاربری متعلق به خودت است."); return; }
+    const { data: conversation, error: createError } = await supabase.from("conversations")
+      .insert({ title: friend.display_name, is_group: false, created_by: authUser.id })
+      .select("id,title,is_group,created_at").single();
+    if (createError) { setNotice("ساخت گفتگو انجام نشد: " + createError.message); return; }
+    const { error: membersError } = await supabase.from("conversation_members").insert([
+      { conversation_id: conversation.id, user_id: authUser.id },
+      { conversation_id: conversation.id, user_id: friend.id }
+    ]);
+    if (membersError) { setNotice("افزودن عضو انجام نشد: " + membersError.message); return; }
+    const item = { ...conversation, name: friend.display_name, photo: "" };
+    setConversations((items) => [item, ...items]);
+    setActive(item);
+    setPage("chats");
+    setMobileChatOpen(true);
+    setPhone("");
   }
+
 
   // Never render chats, settings, or navigation until Firebase confirms a signed-in user.
   if (!authUser) {
@@ -234,14 +307,14 @@ export default function App() {
           <button className={page === "account" ? "side-action active" : "side-action"} onClick={() => setPage("account")}>ورود</button>
           <button className={page === "settings" ? "side-action active" : "side-action"} onClick={() => setPage("settings")}>تنظیمات</button>
         </div>
-        {page === "chats" && <><div className="section-title"><span>گفتگوها</span><button className="new-message" type="button" onClick={()=>setPage("friends")}>＋ پیام جدید</button></div><nav className="chat-list" aria-label="گفتگوها">{demoChats.map((chat) => <button className={active.id === chat.id ? "chat-item selected" : "chat-item"} key={chat.id} onClick={() => {setActive(chat);setMobileChatOpen(true);}}><div className={"avatar " + chat.color}>{chat.photo && <img src={chat.photo} alt={chat.name}/>}</div><div className="chat-copy"><strong>{chat.name}</strong><span>{chat.message}</span></div><div className="chat-meta"><time>{chat.time}</time>{chat.unread > 0 && <i>{chat.unread}</i>}</div></button>)}</nav></>}
+        {page === "chats" && <><div className="section-title"><span>گفتگوها</span><button className="new-message" type="button" onClick={()=>setPage("friends")}>＋ پیام جدید</button></div><nav className="chat-list" aria-label="گفتگوها">{conversations.map((chat) => <button className={active.id === chat.id ? "chat-item selected" : "chat-item"} key={chat.id} onClick={() => {setActive(chat);setMobileChatOpen(true);}}><div className={"avatar " + chat.color}>{chat.photo && <img src={chat.photo} alt={chat.name}/>}</div><div className="chat-copy"><strong>{chat.name}</strong><span>{chat.message}</span></div><div className="chat-meta"><time>{chat.time}</time>{chat.unread > 0 && <i>{chat.unread}</i>}</div></button>)}{conversations.length===0 && <p className="setting-hint">هنوز گفتگویی نداری؛ از بخش دوستان نام کاربری دوستت را جست‌وجو کن.</p>}</nav></>}
         <div className="sidebar-note">نسخهٔ آزمایشی افغان چت</div>
       </aside>}
       {page === "chats" ? <section className="conversation">
         <header className="conversation-head"><button className="mobile-back" type="button" onClick={()=>setMobileChatOpen(false)} aria-label="بازگشت به گفتگوها">‹</button><div className="avatar green">{active.photo ? <img src={active.photo} alt={active.name}/> : active.name.slice(0, 1)}</div><div className="contact-title"><strong>{active.name}</strong><span>گفتگوی آزمایشی</span></div><div className="call-actions"><button type="button" title="تماس صوتی" onClick={() => openCall(active.name, "voice")}>☎</button><button type="button" title="تماس تصویری" onClick={() => openCall(active.name, "video")}>▣</button></div><button className="more" aria-label="گزینه‌ها">•••</button></header>
-        <div className="messages"><div className="date-chip">امروز</div>{messages.map((item) => <div className={"bubble-row " + (item.from === "me" ? "mine" : "")} key={item.id}><div className="bubble">{item.type === "image" ? <img className="message-media" src={item.url} alt="عکس فرستاده‌شده" /> : item.type === "video" ? <video className="message-media" src={item.url} controls /> : item.type === "audio" ? <audio src={item.url} controls /> : item.type === "file" ? <a href={item.url} download={item.name}>{item.name}</a> : item.text}<small>{item.from === "me" ? "در همین گوشی" : "دریافت شد"}</small></div>{item.from === "me" && <button className="delete" title="حذف پیام" onClick={() => setMessages((all) => all.filter((m) => m.id !== item.id))}>حذف</button>}</div>)}</div>
+        <div className="messages"><div className="date-chip">امروز</div>{messages.map((item) => <div className={"bubble-row " + (item.from === "me" ? "mine" : "")} key={item.id}><div className="bubble">{item.type === "image" ? <img className="message-media" src={item.url} alt="عکس فرستاده‌شده" /> : item.type === "video" ? <video className="message-media" src={item.url} controls /> : item.type === "audio" ? <audio src={item.url} controls /> : item.type === "file" ? <a href={item.url} download={item.name}>{item.name}</a> : item.text}<small>{item.from === "me" ? "در همین گوشی" : "دریافت شد"}</small></div>{item.from === "me" && <button className="delete" title="حذف پیام" onClick={() => deleteMessage(item.id)}>حذف</button>}</div>)}</div>
         <form className="composer" onSubmit={sendMessage}><input ref={filePicker} className="hidden-file" type="file" accept="image/*,video/*,audio/*" onChange={addAttachment} /><button className="attach" type="button" title="فرستادن عکس یا ویدیو" onClick={() => filePicker.current?.click()}>＋</button><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="پیامت را بنویس..." aria-label="متن پیام" /><button className={recording ? "record recording" : "record"} type="button" title={recording ? "پایان ضبط" : "ضبط پیام صوتی"} onClick={toggleRecording}>{recording ? "■" : "🎙"}</button><button className="send" type="submit">ارسال</button></form>
-        {notice && <button className="notice chat-notice" onClick={() => setNotice("")}>{notice}  ✕</button>}<p className="demo-warning">پیام‌های متنی این گفتگو در حساب خودت در Firebase ذخیره می‌شوند. گفتگوی واقعی با کاربران دیگر، افزودن دوستان و رسانه‌ها هنوز جداگانه باید راه‌اندازی شود.</p>
+        {notice && <button className="notice chat-notice" onClick={() => setNotice("")}>{notice}  ✕</button>}<p className="demo-warning">پیام‌های متنی این گفتگو در Supabase ذخیره و با اعضای گفتگو همگام می‌شوند.</p>
       </section> : page === "status" ? <section className="content-page"><h2>وضعیت‌ها</h2><p>عکس، ویدیو یا نوشته‌ات را به مدت ۲۴ ساعت با دوستان شریک کن.</p>
         <input ref={statusPicker} className="hidden-file" type="file" accept="image/*,video/*" onChange={e=>{const file=e.target.files?.[0];if(file)setStatusMedia({url:URL.createObjectURL(file),type:file.type.startsWith("video/")?"video":"image",name:file.name});}}/>
         <form className="friend-form" onSubmit={e=>{e.preventDefault();if(statusText.trim()||statusMedia){setMyStatuses(items=>[{id:Date.now(),text:statusText.trim(),media:statusMedia,audience:statusAudience},...items]);setStatusText("");setStatusMedia(null);}}}>
@@ -253,11 +326,11 @@ export default function App() {
         <div className="status-list"><h3>وضعیت من</h3>{myStatuses.length?myStatuses.map((s,i)=><div className="status-card" key={s.id||i}><strong>من · همین حالا</strong>{s.text&&<p>{s.text}</p>}{s.media&&(s.media.type==="video"?<video className="status-media" src={s.media.url} controls/>:<img className="status-media" src={s.media.url} alt="وضعیت من"/>)}<small>مخاطبان: {s.audience||"همهٔ دوستان"}</small></div>):<div className="status-card">هنوز وضعیتی منتشر نکرده‌ای.</div>}
           <h3>وضعیت دوستان</h3>{[{name:"احمد",text:"الحمدلله برای یک روز تازه"},{name:"فاطمه",text:"یک روز زیبا و پر از امید 🌿"}].map((s,i)=><div className="status-card" key={s.name}><b>{s.name}</b><p>{s.text}</p><div className="status-tools"><button onClick={()=>setStatusReplies(r=>({...r,[s.name]:"❤️"}))}>❤️ واکنش</button><button onClick={()=>setStatusReplies(r=>({...r,[s.name]:r[s.name]==="پاسخ خصوصی"?"":"پاسخ خصوصی"}))}>پاسخ خصوصی</button></div>{statusReplies[s.name]&&<small>{statusReplies[s.name]} · فقط برای صاحب وضعیت</small>}</div>)}</div>
         <p className="demo-warning">وضعیت‌ها و واکنش‌ها آزمایشی‌اند و هنوز برای دیگران فرستاده نمی‌شوند.</p></section> : page === "calls" ? <section className="content-page"><h2>تماس‌ها</h2><p>تماس‌های صوتی و تصویری اخیر.</p><div className="settings-list"><div className="call-row"><span>احمد · تماس صوتی</span><small>امروز، ۱۰:۳۰</small><button onClick={()=>openCall("احمد", "voice")}>☎ آماده‌سازی</button></div><div className="call-row"><span>فاطمه · تماس تصویری</span><small>دیروز، ۱۸:۴۵</small><button onClick={()=>openCall("فاطمه", "video")}>▣ آماده‌سازی</button></div></div>{notice && <p className="notice">{notice}</p>}<p className="demo-warning">فهرست تماس‌ها نمونه است؛ تماس واقعی هنوز فعال نیست.</p></section> : page === "friends" ? <section className="content-page">
-        <h2>افزودن دوستان</h2><p>شماره دوستت را با کود کشور وارد کن تا حساب افغان چت او جست‌وجو شود.</p>
-        <form className="friend-form" onSubmit={findFriend}><label htmlFor="friend-phone">شماره تلفن</label><input id="friend-phone" dir="ltr" value={phone} onChange={(e) => {setPhone(e.target.value);setNotice("");}} placeholder="+93700000000" /><button className="send" type="submit">جست‌وجوی دوست</button></form>
+        <h2>افزودن دوستان</h2><p>نام کاربری دوستت را وارد کن تا حساب افغان‌چت او پیدا شود.</p>
+        <form className="friend-form" onSubmit={findFriend}><label htmlFor="friend-phone">نام کاربری دوست</label><input id="friend-phone" dir="ltr" value={phone} onChange={(e) => {setPhone(e.target.value);setNotice("");}} placeholder="user_123456789abc" /><button className="send" type="submit">جست‌وجوی دوست</button></form>
         <div className="help-card"><strong>دوستت افغان چت ندارد؟</strong><p>می‌توانی بعداً لینک دعوت را برایش بفرستی.</p></div>
         {notice && <p className="notice">{notice}</p>}
-        <p className="demo-warning">جست‌وجوی واقعی نیازمند سرور و اتصال امن به شماره‌های ثبت‌شده است.</p>
+        <p className="demo-warning">برای پیدا کردن دوست، نام کاربری او را از خودش بگیر.</p>
       </section> : page === "settings" ? <section className="content-page settings-page"><h2>تنظیمات</h2><p>حساب و برنامهٔ افغان چت را مدیریت کن.</p>
         <div className="settings-group"><h3>پروفایل من</h3><label>نام نمایشی<input value={displayName} onChange={e=>setDisplayName(e.target.value)} /></label><label>دربارهٔ من<input value={about} onChange={e=>setAbout(e.target.value)} /></label><small>تغییرات فعلاً در همین گوشی نمایش داده می‌شود.</small></div>
         <div className="settings-group"><h3>حریم خصوصی</h3>
@@ -295,7 +368,7 @@ export default function App() {
 
         <p className="demo-warning">تنظیمات حساب و حریم خصوصی فعلاً روی سرور ذخیره نمی‌شوند.</p></section> : null}
       {page === "groups" && <section className="content-page"><h2>گروه‌ها</h2><p>گروه تازه بساز و اعضا را اضافه کن.</p><form className="friend-form" onSubmit={e=>{e.preventDefault();if(groupName.trim()){setGroups(gs=>[{id:Date.now(),name:groupName.trim(),members:["من",...(groupMember.trim()?[groupMember.trim()]:[])]},...gs]);setGroupName("");setGroupMember("");}}}><label>نام گروه</label><input value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="مثلاً گروه دوستان"/><label>نام یک عضو (اختیاری)</label><input value={groupMember} onChange={e=>setGroupMember(e.target.value)} placeholder="نام دوست"/><button className="send" type="submit">ساخت گروه</button></form><div className="status-list"><h3>گروه‌های من</h3>{groups.map(g=><div className="status-card" key={g.id}><strong>{g.name}</strong><p>{g.members.length} عضو: {g.members.join("، ")}</p><button className="text-action" onClick={()=>setGroups(gs=>gs.filter(x=>x.id!==g.id))}>حذف گروه آزمایشی</button></div>)}</div><p className="demo-warning">ساخت و حذف گروه فعلاً فقط در همین گوشی انجام می‌شود.</p></section>}
-      {page === "account" && <section className="content-page"><h2>ورود به افغان چت</h2><p>با شمارهٔ افغانستان یا ایران، یا حساب گوگل وارد شو.</p><div className="settings-group"><h3>ورود با شماره تلفن</h3><label>کشور<select value={loginCountry} onChange={e=>setLoginCountry(e.target.value)}><option value="+93">افغانستان +93</option><option value="+98">ایران +98</option></select></label><label>شماره تلفن<input dir="ltr" value={loginPhone} onChange={e=>setLoginPhone(e.target.value)} placeholder="700000000"/></label>{loginStep&&<label>کد آزمایشی<input dir="ltr" value={loginCode} onChange={e=>setLoginCode(e.target.value)} placeholder="کد یک‌بارمصرف"/></label>}<div id="recaptcha-container"></div><button className="send" disabled={authBusy} onClick={loginStep?verifyPhoneCode:requestPhoneCode}>{authBusy?"لطفاً صبر کن...":loginStep?"تأیید کد پیامک‌شده":"دریافت کد واقعی"}</button><button className="secondary-action" type="button" onClick={loginWithGoogle}>ادامه با Google</button>{authUser&&<p className="login-success">وارد شده‌ای: {authUser.phoneNumber || authUser.email}</p>}{notice&&<p className="notice">{notice}</p>}</div><p className="setting-hint">برای پیامک، شماره باید با کود کشور درست باشد و دامنهٔ برنامه در تنظیمات Firebase مجاز باشد. پیامک ممکن است سهمیهٔ محدود داشته باشد.</p></section>}
+      {page === "account" && <section className="content-page"><h2>حساب من</h2><p>{authUser?.email || "حساب افغان‌چت"}</p><div className="settings-group"><p>ورود با Supabase فعال است. ورود با شماره تلفن پس از تنظیم سرویس پیامک فعال می‌شود.</p><button className="send" type="button" onClick={async()=>{await supabase.auth.signOut();setPage("welcome");}}>خروج از حساب</button></div></section>}
       {page === "more" && <section className="content-page more-page"><h2>بیشتر</h2><p>بخش‌های دیگر افغان چت</p><div className="more-menu">
         <button onClick={()=>setPage("friends")}><span>👥</span><strong>دوستان</strong><small>یافتن و افزودن دوست</small><b>‹</b></button>
         <button onClick={()=>setPage("groups")}><span>👨‍👩‍👧‍👦</span><strong>گروه‌ها</strong><small>ساخت و مدیریت گروه‌ها</small><b>‹</b></button>
