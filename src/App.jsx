@@ -143,7 +143,7 @@ export default function App() {
       if (error) { setNotice("خواندن پیام‌ها انجام نشد: " + error.message); return; }
       const mapped = await Promise.all((data || []).map(async (item) => {
         let mediaUrl = item.media_url;
-        if (mediaUrl && item.message_type !== "text" && !/^https?:\\/\\//.test(mediaUrl)) {
+        if (mediaUrl && item.message_type !== "text" && !/^https?:\/\//.test(mediaUrl)) {
           const { data: signed } = await supabase.storage.from("chat-media").createSignedUrl(mediaUrl, 3600);
           mediaUrl = signed?.signedUrl || "";
         }
@@ -209,7 +209,7 @@ export default function App() {
 
   function continueWithEmail() {
     const email = emailAddress.trim().toLowerCase();
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setNotice("نشانی جیمیل را درست وارد کن.");
       return;
     }
