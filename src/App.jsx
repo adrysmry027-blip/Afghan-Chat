@@ -444,8 +444,8 @@ export default function App() {
     if (!value) { setNotice("نام کاربری دوستت را وارد کن."); return; }
     setNotice("");
     let friend = null;
-    if (/^\\+?(93|98)\\d{7,12}$/.test(value.replace(/[\\s()-]/g, ""))) {
-      const phoneValue = value.replace(/[\\s()-]/g, "");
+    if (/^\+?(93|98)\d{7,12}$/.test(value.replace(/[\s()-]/g, ""))) {
+      const phoneValue = value.replace(/[\s()-]/g, "");
       const normalizedPhone = phoneValue.startsWith("+") ? phoneValue : "+" + phoneValue;
       const { data, error } = await supabase.rpc("find_user_by_phone", { p_phone: normalizedPhone });
       if (error) { setNotice("جستجوی شماره انجام نشد: " + error.message); return; }
