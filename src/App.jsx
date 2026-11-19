@@ -509,6 +509,8 @@ export default function App() {
               <input id="login-otp" className="wa-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک"/>
             </>}
             <button className="wa-next" type="button" disabled={authBusy || (!phoneOtpSent && phoneNumber.replace(/\D/g,"").length<6) || (phoneOtpSent && phoneOtp.length!==6)} onClick={phoneOtpSent?verifyPhoneCode:sendPhoneCode}>{authBusy?(phoneOtpSent?"در حال بررسی...":"در حال ارسال..."):phoneOtpSent?"تأیید و ادامه":"بعدی"}</button>
+            <button className="wa-auth-google" type="button" onClick={()=>{setEmailStep("email");setPage("email-login");setNotice("");}}>ورود با جیمیل و رمز افغان‌چت</button>
+            <button className="wa-auth-google" type="button" onClick={loginWithGoogle} disabled={authBusy}>ورود با حساب گوگل</button>
             {phoneOtpSent && <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>}
             {notice && <p className="notice" role="alert">{notice}</p>}
           </div>
