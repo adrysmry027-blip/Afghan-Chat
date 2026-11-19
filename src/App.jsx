@@ -64,7 +64,7 @@ export default function App() {
   async function loginWithGoogle() {
     setAuthBusy(true);
     try { await signInWithPopup(auth, googleProvider); setNotice(""); }
-    catch (error) { setNotice(error.code === "auth/popup-blocked" ? "مرورگر پنجرهٔ ورود گوگل را بسته است؛ در مرورگر اصلی دوباره تلاش کن." : `ورود گوگل ناموفق شد: ${error.message}`); }
+    catch (error) { const messages = { "auth/network-request-failed": "اتصال به گوگل برقرار نشد. اینترنت گوشی را بررسی کن و اگر شبکه دسترسی به گوگل را محدود کرده، با اینترنت یا VPN پایدار دوباره تلاش کن.", "auth/popup-blocked": "پنجرهٔ ورود گوگل باز نشد. برنامه را در مرورگر اصلی باز کن و دوباره تلاش کن.", "auth/unauthorized-domain": "دامنهٔ برنامه در Firebase برای ورود گوگل مجاز نشده است؛ تنظیمات Firebase باید اصلاح شود.", "auth/operation-not-allowed": "ورود با گوگل در Firebase فعال نیست؛ باید از بخش Authentication فعال شود." }; setNotice(messages[error.code] || `ورود گوگل ناموفق شد: ${error.message}`); }
     finally { setAuthBusy(false); }
   }
 
@@ -94,7 +94,7 @@ export default function App() {
       recaptcha.current = null;
       const recaptchaContainer = document.getElementById("recaptcha-container");
       if (recaptchaContainer) recaptchaContainer.replaceChildren();
-      setNotice(`ارسال کد انجام نشد: ${error.message}`);
+      const authErrors = { "auth/network-request-failed": "اتصال به سرور تأیید شماره برقرار نشد. اینترنت گوشی را بررسی کن؛ اگر شبکه دسترسی به Firebase/Google را بسته، با اینترنت یا VPN پایدار دوباره امتحان کن.", "auth/invalid-phone-number": "شماره تلفن درست نیست؛ شماره را بدون صفر اول و با کشور درست وارد کن.", "auth/too-many-requests": "درخواست‌های زیادی فرستاده شده؛ کمی صبر کن و بعد دوباره تلاش کن.", "auth/operation-not-allowed": "ورود با شماره تلفن در Firebase فعال نیست؛ باید از بخش Authentication فعال شود.", "auth/unauthorized-domain": "دامنهٔ برنامه در Firebase مجاز نشده است." }; setNotice(authErrors[error.code] || `ارسال کد انجام نشد: ${error.message}`);
     } finally { setAuthBusy(false); }
   }
 
