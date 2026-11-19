@@ -135,6 +135,44 @@ export default function App() {
     setNotice("جست‌وجوی واقعی شماره هنوز به سرور و پایگاه اطلاعاتی وصل نشده است. این بخش فعلاً ظاهر و فرم آزمایشی دارد.");
   }
 
+  // Never render chats, settings, or navigation until Firebase confirms a signed-in user.
+  if (!authUser) {
+    return (
+      <main className="app-shell">
+        <section className="welcome-screen" dir="rtl">
+          <div className="welcome-card">
+            <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
+            <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
+            <h1>خوش آمدید به افغان چت</h1>
+            <p className="welcome-intro">برای ورود، یکی از روش‌های تأیید هویت را انتخاب کنید.</p>
+            <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}>
+              <span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ورود با حساب گوگل"}</span>
+            </button>
+            <div className="welcome-divider"><span>یا</span></div>
+            <label className="login-label">کشور و پیش‌شماره</label>
+            <select value={loginCountry} onChange={e=>setLoginCountry(e.target.value)} aria-label="کشور">
+              <option value="+93">افغانستان ‎+93</option>
+              <option value="+98">ایران ‎+98</option>
+            </select>
+            <label className="login-label" htmlFor="login-phone">شماره تلفن</label>
+            <input id="login-phone" dir="ltr" value={loginPhone} onChange={e=>setLoginPhone(e.target.value)} placeholder="شماره تلفن خود را وارد کنید" />
+            {loginStep && <>
+              <label className="login-label" htmlFor="login-code">کد تأیید پیامک</label>
+              <input id="login-code" dir="ltr" inputMode="numeric" autoComplete="one-time-code" value={loginCode} onChange={e=>setLoginCode(e.target.value)} placeholder="کد شش‌رقمی" />
+            </>}
+            <div id="recaptcha-container"></div>
+            <button className="phone-signin" type="button" onClick={loginStep ? verifyPhoneCode : requestPhoneCode} disabled={authBusy}>
+              {authBusy ? "لطفاً صبر کنید..." : loginStep ? "تأیید کد و ورود" : "دریافت کد ورود"}
+            </button>
+            {notice && <p className="notice" role="alert">{notice}</p>}
+            <p className="security-note">بدون تأیید حساب گوگل یا کد پیامکی، ورود به افغان‌چت ممکن نیست. رمز جیمیل را فقط در صفحهٔ رسمی گوگل وارد کنید؛ افغان‌چت آن را دریافت نمی‌کند.</p>
+            <small>Afghan Chat</small>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className={(theme === "تاریک" ? "app-shell dark-theme" : theme === "مطابق گوشی" ? "app-shell system-theme" : "app-shell") + (mobileChatOpen ? " mobile-chat-open" : "")}>
       {page === "welcome" ? <section className="welcome-screen" dir="rtl">
