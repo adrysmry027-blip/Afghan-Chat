@@ -126,11 +126,19 @@ export default function App() {
       const { data, error } = await supabase.from("messages").select("*")
         .eq("conversation_id", active.id).order("created_at", { ascending: true });
       if (error) { setNotice("خواندن پیام‌ها انجام نشد: " + error.message); return; }
-      if (!cancelled) setMessages((data || []).map((item) => ({
-        id: item.id, from: item.sender_id === authUser.id ? "me" : "them",
-        text: item.body, type: item.message_type, url: item.media_url,
-        createdAt: new Date(item.created_at).getTime()
-      })));
+      const mapped = await Promise.all((data || []).map(async (item) => {
+        let mediaUrl = item.media_url;
+        if (mediaUrl && item.message_type !== "text" && !/^https?:\\/\\//.test(mediaUrl)) {
+          const { data: signed } = await supabase.storage.from("chat-media").createSignedUrl(mediaUrl, 3600);
+          mediaUrl = signed?.signedUrl || "";
+        }
+        return {
+          id: item.id, from: item.sender_id === authUser.id ? "me" : "them",
+          text: item.body, type: item.message_type, url: mediaUrl,
+          createdAt: new Date(item.created_at).getTime()
+        };
+      }));
+      if (!cancelled) setMessages(mapped);
     };
     loadMessages();
     const channel = supabase.channel("messages-" + active.id)
@@ -205,13 +213,27 @@ export default function App() {
     if (error) setNotice("حذف پیام انجام نشد: " + error.message);
   }
 
-  function addAttachment(event) {
+  async function addAttachment(event) {
     const file = event.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const kind = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : file.type.startsWith("audio/") ? "audio" : "file";
-    setMessages((items) => [...items, { id: Date.now(), from: "me", type: kind, url, name: file.name }]);
     event.target.value = "";
+    if (!file || !authUser?.id || !active?.id) return;
+    if (file.size > 25 * 1024 * 1024) { setNotice("حجم فایل باید کمتر از ۲۵ مگابایت باشد."); return; }
+    const kind = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : file.type.startsWith("audio/") ? "audio" : "file";
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-90) || "attachment";
+    const objectPath = active.id + "/" + authUser.id + "/" + Date.now() + "-" + safeName;
+    setNotice("در حال بارگذاری فایل...");
+    const { error: uploadError } = await supabase.storage.from("chat-media").upload(objectPath, file, { contentType: file.type || "application/octet-stream", upsert: false });
+    if (uploadError) { setNotice("بارگذاری فایل انجام نشد: " + uploadError.message); return; }
+    const { error: messageError } = await supabase.from("messages").insert({
+      conversation_id: active.id, sender_id: authUser.id, body: file.name,
+      message_type: kind, media_url: objectPath
+    });
+    if (messageError) {
+      await supabase.storage.from("chat-media").remove([objectPath]);
+      setNotice("ثبت پیام انجام نشد: " + messageError.message);
+      return;
+    }
+    setNotice("");
   }
 
   async function toggleRecording() {
