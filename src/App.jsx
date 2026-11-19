@@ -100,6 +100,25 @@ export default function App() {
     } finally { setAuthBusy(false); }
   }
 
+  async function loginWithGoogle() {
+    setAuthBusy(true);
+    setNotice("");
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      const errors = {
+        "auth/popup-closed-by-user": "صفحهٔ ورود گوگل بسته شد؛ دوباره تلاش کن.",
+        "auth/popup-blocked": "مرورگر پنجرهٔ ورود گوگل را بسته است؛ اجازهٔ بازشدن پنجره را بده.",
+        "auth/operation-not-allowed": "ورود با Google در Firebase فعال نشده است.",
+        "auth/unauthorized-domain": "دامنهٔ برنامه در تنظیمات مجاز Firebase ثبت نشده است.",
+        "auth/network-request-failed": "اتصال اینترنت برقرار نیست؛ اینترنت را بررسی کن."
+      };
+      setNotice(errors[error.code] || "ورود با گوگل انجام نشد. تنظیمات Firebase و اتصال اینترنت را بررسی کن.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   function openCall(contact, media) {
     setCallSession(createCallSession({ contact, media }));
   }
@@ -167,6 +186,7 @@ export default function App() {
             <label className="login-label" htmlFor="login-password">رمز عبور</label>
             <input id="login-password" type="password" dir="ltr" autoComplete="current-password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} placeholder="رمز دلخواه افغان‌چت" />
             <button className="phone-signin" type="button" onClick={loginWithAppPassword} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ورود به افغان‌چت"}</button>
+            <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}><span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ورود با حساب گوگل"}</span></button>
             <div className="settings-group country-preview">
               <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره (فعلاً غیرفعال)</label>
               <select id="login-country" value={loginCountry} onChange={e=>setLoginCountry(e.target.value)}>
