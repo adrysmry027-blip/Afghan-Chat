@@ -824,3 +824,19 @@ body{background:#edf3fb;color:#172b45}
   .mobile-bottom-nav{grid-template-columns:repeat(4,minmax(0,1fr));height:68px}
   .mobile-bottom-nav button{min-width:0}
 }
+
+
+/* Match the approved WhatsApp reference: familiar green top bar and accents. */
+:root{--ac-blue:#075e54;--ac-blue-dark:#064e45;--ac-blue-soft:#e7f5ec;--wa-green:#075e54;--wa-green-2:#128c7e}
+.brand{background:linear-gradient(105deg,#075e54,#064e45)!important;color:#fff}
+.brand h1,.brand p{color:#fff}
+.side-action.active,.mobile-bottom-nav button.active{color:#075e54}
+.mobile-bottom-nav button.active{background:#e7f5ec}
+.content-page h2,.settings-group h3{color:#075e54}
+.send,.phone-signin,.call-close{background:linear-gradient(135deg,#128c7e,#075e54);border-color:#075e54}
+.welcome-screen{background:linear-gradient(145deg,#075e54 0%,#128c7e 55%,#064e45 100%)}
+.welcome-card h1{color:#075e54}
+@media(max-width:680px){
+  .brand{background:linear-gradient(105deg,#075e54,#064e45)!important}
+  .mobile-bottom-nav button.active{color:#075e54;background:#e7f5ec}
+}
