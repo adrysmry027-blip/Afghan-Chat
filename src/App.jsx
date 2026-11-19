@@ -47,6 +47,9 @@ export default function App() {
   const [phoneNumber,setPhoneNumber] = useState("");
   const [phoneOtp,setPhoneOtp] = useState("");
   const [phoneOtpSent,setPhoneOtpSent] = useState(false);
+  const [emailAddress,setEmailAddress] = useState("");
+  const [emailOtp,setEmailOtp] = useState("");
+  const [emailOtpSent,setEmailOtpSent] = useState(false);
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
   const statusPicker = useRef(null);
@@ -187,6 +190,45 @@ export default function App() {
     if (error) setNotice("ذخیره پروفایل انجام نشد: " + error.message);
     else setNotice("پروفایل با موفقیت ذخیره شد.");
     setAuthBusy(false);
+  }
+
+  async function sendEmailCode() {
+    const email = emailAddress.trim().toLowerCase();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      setNotice("نشانی جیمیل را درست وارد کن.");
+      return;
+    }
+    setAuthBusy(true);
+    setNotice("");
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true }
+      });
+      if (error) throw error;
+      setEmailOtpSent(true);
+      setNotice("درخواست فرستادن کُد ثبت شد. اگر تنظیمات ایمیل کامل باشد، کُد به جیمیل می‌رسد.");
+    } catch (error) {
+      setNotice("فرستادن کُد به جیمیل انجام نشد: " + (error.message || "تنظیمات ایمیل را بررسی کن."));
+    } finally { setAuthBusy(false); }
+  }
+
+  async function verifyEmailCode() {
+    const email = emailAddress.trim().toLowerCase();
+    const token = emailOtp.trim();
+    if (!/^\\d{6}$/.test(token)) {
+      setNotice("کُد جیمیل باید ۶ رقم باشد.");
+      return;
+    }
+    setAuthBusy(true);
+    setNotice("");
+    try {
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+      if (error) throw error;
+      setNotice("");
+    } catch (error) {
+      setNotice("کُد نادرست است یا اعتبارش تمام شده: " + error.message);
+    } finally { setAuthBusy(false); }
   }
 
   async function sendPhoneCode() {
@@ -334,6 +376,15 @@ export default function App() {
             <h1>ورود به افغان چت</h1>
             <p className="welcome-intro">برای ورود، شماره را تأیید کن یا از حساب گوگل استفاده کن.</p>
             <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}><span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ادامه با حساب گوگل"}</span></button>
+            <div className="welcome-divider"><span>یا ورود با جیمیل</span></div>
+            <label className="login-label" htmlFor="login-email">نشانی جیمیل</label>
+            <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com" disabled={emailOtpSent} />
+            {!emailOtpSent ? <button className="phone-signin" type="button" onClick={sendEmailCode} disabled={authBusy}>{authBusy ? "در حال ارسال..." : "فرستادن کُد به جیمیل"}</button> : <>
+              <label className="login-label" htmlFor="login-email-otp">کُد شش‌رقمی جیمیل</label>
+              <input id="login-email-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={emailOtp} onChange={e=>setEmailOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد جیمیل" />
+              <button className="phone-signin" type="button" onClick={verifyEmailCode} disabled={authBusy}>{authBusy ? "در حال بررسی..." : "تأیید کُد و ورود"}</button>
+              <button className="back-link" type="button" onClick={()=>{setEmailOtpSent(false);setEmailOtp("");setNotice("");}}>تغییر جیمیل</button>
+            </>}
             <div className="welcome-divider"><span>یا ورود با شماره تلفن</span></div>
             <div className="settings-group country-preview">
               <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره</label>
