@@ -76,12 +76,13 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser?.id) { setUsername(""); return; }
-    supabase.from("profiles").select("username,display_name,about")
+    supabase.from("profiles").select("username,display_name,about,avatar_url")
       .eq("id", authUser.id).maybeSingle().then(({ data }) => {
         if (data) {
           setUsername(data.username || "");
           setDisplayName(data.display_name || authUser.email?.split("@")[0] || "کاربر افغان چت");
           setAbout(data.about || "");
+          setProfileImage(data.avatar_url || "");
         }
       });
   }, [authUser?.id]);
@@ -146,6 +147,30 @@ export default function App() {
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [authUser?.id, active?.id]);
+
+  async function uploadAvatar(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !authUser?.id) return;
+    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+      setNotice("عکس باید JPG، PNG یا WebP و کمتر از ۵ مگابایت باشد.");
+      return;
+    }
+    const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const objectPath = authUser.id + "/avatar." + extension;
+    setNotice("در حال ذخیره عکس پروفایل...");
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(objectPath, file, {
+      contentType: file.type, upsert: true
+    });
+    if (uploadError) { setNotice("ذخیره عکس انجام نشد: " + uploadError.message); return; }
+    const { data } = supabase.storage.from("avatars").getPublicUrl(objectPath);
+    const avatarUrl = data.publicUrl + "?v=" + Date.now();
+    const { error: profileError } = await supabase.from("profiles")
+      .upsert({ id: authUser.id, avatar_url: avatarUrl, updated_at: new Date().toISOString() });
+    if (profileError) { setNotice("ذخیره نشانی عکس انجام نشد: " + profileError.message); return; }
+    setProfileImage(avatarUrl);
+    setNotice("");
+  }
 
   async function sendPhoneCode() {
     const digits = phoneNumber.replace(/[^0-9]/g, "");
@@ -337,7 +362,7 @@ export default function App() {
       </section> : page === "google-login" ? <section className="welcome-screen" dir="rtl"><div className="welcome-card login-card"><button className="back-link" type="button" onClick={()=>setPage("welcome")}>← بازگشت</button><div className="google-g large">G</div><h1>ورود امن با گوگل</h1><p className="welcome-intro">برای ورود، حساب گوگل را در صفحهٔ رسمی انتخاب کن.</p><button className="send" type="button" disabled={authBusy} onClick={loginWithGoogle}>{authBusy ? "در حال اتصال..." : "ادامه با Google"}</button><p className="security-note">رمز جیمیل را در افغان‌چت وارد نکن؛ تأیید هویت در صفحهٔ رسمی گوگل انجام می‌شود.</p>{notice && <p className="notice">{notice}</p>}</div></section>: null}
       {!["welcome","google-login"].includes(page) && <aside className="sidebar">
         <header className="brand"><div className="brand-mark"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div><div><h1>افغان چت</h1><p>Afghan Chat</p></div></header>
-        <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : <img src="/afghan-chat-logo.svg" alt="عکس پروفایل افغان چت"/>}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(file)setProfileImage(URL.createObjectURL(file));}}/><div><strong>{displayName}</strong><span dir="ltr">@{username || "..."}</span></div></div>
+        <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : <img src="/afghan-chat-logo.svg" alt="عکس پروفایل افغان چت"/>}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadAvatar}/><div><strong>{displayName}</strong><span dir="ltr">@{username || "..."}</span></div></div>
         <div className="side-actions">
           <button className={page === "chats" ? "side-action active" : "side-action"} onClick={() => {setPage("chats");setMobileChatOpen(false);}}>گفتگوها</button>
           <button className={page === "friends" ? "side-action active" : "side-action"} onClick={() => setPage("friends")}>دوستان</button>
