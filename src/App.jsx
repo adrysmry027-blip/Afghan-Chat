@@ -14,6 +14,7 @@ export default function App() {
   const [guestMode, setGuestMode] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [chatSearch, setChatSearch] = useState("");
   const [authUser, setAuthUser] = useState(null);
   const [authBusy, setAuthBusy] = useState(false);
 
@@ -515,15 +516,10 @@ export default function App() {
       {!["welcome","google-login"].includes(page) && <aside className="sidebar">
         <header className="brand">
           <div className="brand-identity">
-            <div className="brand-mark"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
-            <div><h1>افغان چت</h1><p>Afghan Chat</p></div>
+            <div><h1>افغان چت</h1></div>
           </div>
           <div className="brand-actions">
-            <button className="top-icon" type="button" aria-label="جستجوی دوستان" title="جستجو" onClick={()=>{setPage("friends");setMoreOpen(false);}}>⌕</button>
-            <button className="top-profile" type="button" onClick={()=>{setPage("settings");setMoreOpen(false);}} aria-label="پروفایل من">
-              <span className="top-avatar">{profileImage ? <img src={profileImage} alt=""/> : <img src="/afghan-chat-logo.svg" alt=""/>}</span>
-              <span className="top-profile-name">{displayName}</span>
-            </button>
+            <button className="top-icon top-camera" type="button" aria-label="افزودن وضعیت" title="دوربین" onClick={()=>statusPicker.current?.click()}>▣</button>
             <button className="top-icon top-more" type="button" aria-label="منوی بیشتر" aria-expanded={moreOpen} onClick={()=>setMoreOpen(v=>!v)}>⋮</button>
           </div>
           {moreOpen && <div className="top-menu" role="menu">
@@ -539,7 +535,12 @@ export default function App() {
           </div>}
           <input ref={avatarPicker} className="hidden-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadAvatar}/>
         </header>
-        {page === "chats" && <><div className="section-title"><span>گفتگوها</span><button className="new-message" type="button" onClick={()=>setPage("friends")}>＋ پیام جدید</button></div><nav className="chat-list" aria-label="گفتگوها">{conversations.map((chat) => <button className={active.id === chat.id ? "chat-item selected" : "chat-item"} key={chat.id} onClick={() => {setActive(chat);setMobileChatOpen(true);}}><div className={"avatar " + chat.color}>{chat.photo && <img src={chat.photo} alt={chat.name}/>}</div><div className="chat-copy"><strong>{chat.name}</strong><span>{chat.message}</span></div><div className="chat-meta"><time>{chat.time}</time>{chat.unread > 0 && <i>{chat.unread}</i>}</div></button>)}{conversations.length===0 && <p className="setting-hint">هنوز گفتگویی نداری؛ از بخش دوستان نام کاربری دوستت را جست‌وجو کن.</p>}</nav></>}
+        {page === "chats" && <>
+          <label className="wa-search"><span>⌕</span><input value={chatSearch} onChange={e=>setChatSearch(e.target.value)} placeholder="جستجو..." aria-label="جستجوی گفتگوها"/></label>
+          <button className="wa-archive" type="button" onClick={()=>setNotice("بخش بایگانی گفتگوها به‌زودی فعال می‌شود.")}><span>▣</span><b>بایگانی‌شده</b></button>
+          <nav className="chat-list" aria-label="گفتگوها">{conversations.filter(chat=>(chat.name||"").toLowerCase().includes(chatSearch.trim().toLowerCase())).map((chat) => <button className={active.id === chat.id ? "chat-item selected" : "chat-item"} key={chat.id} onClick={() => {setActive(chat);setMobileChatOpen(true);}}><div className={"avatar " + chat.color}>{chat.photo && <img src={chat.photo} alt={chat.name}/>}</div><div className="chat-copy"><strong>{chat.name}</strong><span>{chat.last_message || chat.message || "برای شروع گفتگو لمس کن"}</span></div><div className="chat-meta"><time>{chat.time || ""}</time>{chat.unread > 0 && <i>{chat.unread}</i>}</div></button>)}{conversations.length===0 && <p className="setting-hint">هنوز گفتگویی نداری؛ از بخش انجمن‌ها دوستانت را پیدا کن.</p>}</nav>
+          <button className="wa-new-chat" type="button" aria-label="گفتگوی جدید" onClick={()=>setPage("friends")}>＋</button>
+        </>}
         <div className="sidebar-note">نسخهٔ آزمایشی افغان چت</div>
       </aside>}
       {page === "chats" ? <section className="conversation">
@@ -608,10 +609,10 @@ export default function App() {
         <button onClick={()=>setPage("settings")}><span>⚙️</span><strong>تنظیمات</strong><small>حریم خصوصی و ظاهر برنامه</small><b>‹</b></button>
       </div></section>}
       <nav className="mobile-bottom-nav" aria-label="منوی اصلی">
-        <button className={page==="chats"?"active":""} onClick={()=>{setPage("chats");setMobileChatOpen(false);}}><span>☷</span><b>گفتگوها</b></button>
-        <button className={page==="friends"?"active":""} onClick={()=>{setPage("friends");setMobileChatOpen(false);}}><span>♙</span><b>دوستان</b></button>
-        <button className={page==="status"?"active":""} onClick={()=>{setPage("status");setMobileChatOpen(false);}}><span>◉</span><b>وضعیت</b></button>
-        <button className={page==="calls"?"active":""} onClick={()=>{setPage("calls");setMobileChatOpen(false);}}><span>☎</span><b>تماس‌ها</b></button>
+        <button className={page==="calls"?"active":""} onClick={()=>{setPage("calls");setMobileChatOpen(false);}}><span>♧</span><b>تماس‌ها</b></button>
+        <button className={page==="groups"||page==="friends"?"active":""} onClick={()=>{setPage("groups");setMobileChatOpen(false);}}><span>♧</span><b>انجمن‌ها</b></button>
+        <button className={page==="status"?"active":""} onClick={()=>{setPage("status");setMobileChatOpen(false);}}><span>◉</span><b>به‌روزرسانی‌ها</b></button>
+        <button className={page==="chats"?"active":""} onClick={()=>{setPage("chats");setMobileChatOpen(false);}}><span>▤</span><b>گفتگوها</b></button>
       </nav>
       {callSession && <CallScreen session={callSession} onClose={() => setCallSession(null)} />}
     </main>
