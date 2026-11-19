@@ -607,3 +607,49 @@ body{background:#dce3e7;color:var(--wa-text)}
  .app-shell:not(.mobile-chat-open) .content-page{padding-bottom:92px}
  .app-shell:not(.mobile-chat-open) .sidebar .section-title{margin-top:14px}
 }
+
+
+/* Refined, mobile-first WhatsApp-inspired sign-in screen. */
+.welcome-screen{
+  min-height:100dvh;width:100%;display:flex;align-items:center;justify-content:center;
+  padding:clamp(14px,4vw,34px);background:
+  radial-gradient(ellipse at 12% 8%,#27a87855,transparent 36%),
+  linear-gradient(145deg,#075e54 0%,#087e70 54%,#0b6b5e 100%);
+}
+.welcome-card{
+  width:min(100%,430px);padding:clamp(22px,5vw,34px);
+  border:1px solid #ffffff8c;border-radius:24px;
+  box-shadow:0 24px 70px #003d3540;background:#fff;
+  display:flex;flex-direction:column;align-items:stretch;gap:11px;
+}
+.welcome-logo{width:76px;height:76px;margin:0 auto 4px;display:grid;place-items:center;border-radius:23px;background:#e7f5ed;overflow:hidden}
+.welcome-logo img{width:60px;height:60px;object-fit:contain}
+.welcome-kicker{text-align:center;font-size:12px;font-weight:700;letter-spacing:.2px;margin:0;color:#128c62}
+.welcome-card h1{text-align:center;font-size:25px;line-height:1.5;margin:0;color:#075e54}
+.welcome-intro{text-align:center;color:#667781;font-size:13px;line-height:1.9;margin:0 0 8px}
+.google-signin,.phone-signin{
+  min-height:52px;width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
+  font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;
+}
+.google-signin{background:#fff;color:#263238;border:1px solid #dce3e6;border-radius:13px;box-shadow:0 2px 5px #172b3609}
+.google-signin:active,.phone-signin:active{transform:scale(.985)}
+.google-g{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:#fff;color:#4285f4;font:bold 20px Arial;border:1px solid #e7ebee}
+.welcome-divider{display:flex;align-items:center;gap:12px;color:#98a4a9;font-size:11px;margin:3px 0}
+.welcome-divider:before,.welcome-divider:after{content:"";height:1px;flex:1;background:#e8edef}
+.login-label{font-size:12px;font-weight:700;color:#42535a;margin:2px 0 -5px}
+.welcome-card select,.welcome-card input:not([type=checkbox]){
+  width:100%;min-height:49px;padding:11px 14px;border:1px solid #dce4e7;border-radius:12px;
+  background:#fbfcfc;color:#263238;font:inherit;font-size:14px;outline:none;
+}
+.welcome-card select:focus,.welcome-card input:focus{border-color:#128c7e;box-shadow:0 0 0 3px #128c7e18}
+.welcome-card input[dir=ltr]{text-align:left}
+.phone-signin{margin-top:3px;background:#075e54;color:#fff;border:0;border-radius:13px;box-shadow:0 5px 13px #075e5428}
+.notice{width:100%;max-width:none;margin:3px 0 0;border:1px solid #f0d9a9;border-radius:12px;background:#fff8e9;color:#76531b;line-height:1.9;text-align:right}
+.security-note{margin:4px 0 0;padding:11px 12px;border-radius:11px;background:#f2f7f4;color:#60746a;font-size:11px;line-height:1.9;text-align:center}
+.welcome-card>small{text-align:center;color:#9aa7a1;font-size:10px;margin-top:2px}
+#recaptcha-container{min-height:0;overflow:hidden}
+@media(max-width:480px){
+ .welcome-screen{padding:14px;align-items:center}
+ .welcome-card{border-radius:20px;padding:23px 19px;gap:10px}
+ .welcome-card h1{font-size:23px}
+}
