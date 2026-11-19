@@ -255,26 +255,10 @@ export default function App() {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (!signInError) {
           setNotice("");
-        } else if (signInError.message?.toLowerCase().includes("invalid login credentials")) {
-          // First-time users can create an account with the same email and Afghan Chat password.
-          // Existing accounts are never overwritten; Supabase rejects duplicate registrations.
-          const { data, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { display_name: email.split("@")[0] } }
-          });
-          if (signUpError) {
-            if (/already registered|already exists|user exists/i.test(signUpError.message)) {
-              throw new Error("این جیمیل قبلاً حساب دارد؛ رمز افغان‌چت را بررسی کن یا از بازیابی رمز استفاده کن.");
-            }
-            throw signUpError;
-          }
-          if (data.session) {
-            setNotice("");
-          } else {
-            setNotice("حساب ساخته شد. برای فعال‌سازی، ایمیل تأیید ارسال‌شده را باز کن و تأیید کن.");
-          }
         } else {
+          // Never turn a failed login into an implicit sign-up. Users must choose
+          // the explicit account-creation action so a mistyped password cannot
+          // create confusing duplicate/unconfirmed accounts.
           throw signInError;
         }
       }
