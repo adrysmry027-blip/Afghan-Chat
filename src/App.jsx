@@ -115,23 +115,7 @@ export default function App() {
           <p className="welcome-foot">با ورود به افغان‌چت، می‌توانی با دوستان و خانواده‌ات در ارتباط باشی.</p>
           <small>نسخهٔ آزمایشی · Afghan Chat</small>
         </div>
-      </section> : page === "google-login" ? <section className="welcome-screen" dir="rtl">
-        <div className="welcome-card login-card">
-          <button className="back-link" type="button" onClick={()=>setPage("welcome")}>← بازگشت</button>
-          <div className="google-g large">G</div>
-          <h1>ورود آزمایشی با گوگل</h1>
-          <p className="welcome-intro">برای نمایش آزمایشی، جیمیل و یک رمز ساختگی وارد کن.</p>
-          <form className="google-email-form" onSubmit={e=>{e.preventDefault();if(!googleEmail.trim()||!demoGooglePassword.trim()){setNotice("جیمیل و رمز آزمایشی را وارد کن.");return;}setDemoGooglePassword("");setNotice("ورود نمایشی انجام شد. هیچ رمز یا اطلاعاتی ذخیره یا ارسال نشد.");setLoggedIn(true);setPage("chats");}}>
-            <label htmlFor="google-email">آدرس جیمیل</label>
-            <input id="google-email" type="email" dir="ltr" autoComplete="off" value={googleEmail} onChange={e=>setGoogleEmail(e.target.value)} placeholder="name@gmail.com" required />
-            <label htmlFor="demo-google-password">رمز آزمایشی (رمز واقعی جیمیل را وارد نکن)</label>
-            <input id="demo-google-password" type="password" dir="ltr" autoComplete="new-password" value={demoGooglePassword} onChange={e=>setDemoGooglePassword(e.target.value)} placeholder="یک رمز ساختگی بنویس" required />
-            <button className="send" type="submit">ورود به افغان چت</button>
-          </form>
-          <p className="security-note">این فقط نمایش آزمایشی است؛ رمز واردشده ذخیره یا به جایی فرستاده نمی‌شود. برای ورود واقعی گوگل، بعداً صفحهٔ رسمی Google Sign-In وصل می‌شود. رمز واقعی جیمیل را اینجا وارد نکن.</p>
-          {notice && <p className="notice">{notice}</p>}
-        </div>
-      </section> : null}
+      </section> : page === "google-login" ? <section className="welcome-screen" dir="rtl"><div className="welcome-card login-card"><button className="back-link" type="button" onClick={()=>setPage("welcome")}>← بازگشت</button><div className="google-g large">G</div><h1>ورود امن با گوگل</h1><p className="welcome-intro">برای ورود، حساب گوگل را در صفحهٔ رسمی انتخاب کن.</p><button className="send" type="button" disabled={authBusy} onClick={loginWithGoogle}>{authBusy ? "در حال اتصال..." : "ادامه با Google"}</button><p className="security-note">رمز جیمیل را در افغان‌چت وارد نکن؛ تأیید هویت در صفحهٔ رسمی گوگل انجام می‌شود.</p>{notice && <p className="notice">{notice}</p>}</div></section>: null}
       {!["welcome","google-login"].includes(page) && <aside className="sidebar">
         <header className="brand"><div className="brand-mark"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div><div><h1>افغان چت</h1><p>Afghan Chat</p></div></header>
         <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : <img src="/afghan-chat-logo.svg" alt="عکس پروفایل افغان چت"/>}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(file)setProfileImage(URL.createObjectURL(file));}}/><div><strong>{displayName}</strong><span>{about}</span></div></div>
