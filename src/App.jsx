@@ -47,6 +47,9 @@ export default function App() {
   const [phoneNumber,setPhoneNumber] = useState("");
   const [phoneOtp,setPhoneOtp] = useState("");
   const [phoneOtpSent,setPhoneOtpSent] = useState(false);
+  const [emailAddress,setEmailAddress] = useState("");
+  const [emailOtp,setEmailOtp] = useState("");
+  const [emailOtpSent,setEmailOtpSent] = useState(false);
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
   const statusPicker = useRef(null);
@@ -221,6 +224,54 @@ export default function App() {
     } finally { setAuthBusy(false); }
   }
 
+  async function sendEmailCode() {
+    const cleanEmail = emailAddress.trim().toLowerCase();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) {
+      setNotice("آدرس ایمیل را درست وارد کن.");
+      return;
+    }
+    setAuthBusy(true);
+    setNotice("");
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: { shouldCreateUser: true }
+      });
+      if (error) throw error;
+      setEmailAddress(cleanEmail);
+      setEmailOtpSent(true);
+      setNotice("کُد شش‌رقمی به ایمیل تو فرستاده شد. صندوق ورودی و پوشهٔ Spam را بررسی کن.");
+    } catch (error) {
+      setNotice("ارسال کُد ایمیل انجام نشد: " + (error.message || "تنظیمات ارسال ایمیل را بررسی کن."));
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function verifyEmailCode() {
+    const cleanEmail = emailAddress.trim().toLowerCase();
+    const token = emailOtp.replace(/[^0-9]/g, "");
+    if (!/^\\d{6}$/.test(token)) {
+      setNotice("کُد باید شش رقم باشد.");
+      return;
+    }
+    setAuthBusy(true);
+    setNotice("");
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token,
+        type: "email"
+      });
+      if (error) throw error;
+      setNotice("");
+    } catch (error) {
+      setNotice("کُد درست نیست یا اعتبارش تمام شده است: " + error.message);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   async function loginWithGoogle() {
     setAuthBusy(true);
     setNotice("");
@@ -367,33 +418,73 @@ export default function App() {
     return (
       <main className="app-shell">
         <section className="welcome-screen" dir="rtl">
-          <div className="welcome-card">
+          <div className="welcome-card login-card">
             <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
             <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
             <h1>ورود به افغان چت</h1>
-            <p className="welcome-intro">برای ورود، شماره را تأیید کن یا از حساب گوگل استفاده کن.</p>
-            <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}><span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ادامه با حساب گوگل"}</span></button>
-            <div className="welcome-divider"><span>یا ورود با شماره تلفن</span></div>
-            <div className="settings-group country-preview">
-              <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره</label>
-              <select id="login-country" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");}}>
-                <option value="+93">🇦🇫 افغانستان +93</option><option value="+98">🇮🇷 ایران +98</option>
-                <option value="+92">پاکستان +92</option><option value="+992">تاجیکستان +992</option>
-                <option value="+998">ازبکستان +998</option><option value="+993">ترکمنستان +993</option>
-                <option value="+90">ترکیه +90</option><option value="+971">امارات +971</option>
-                <option value="+966">عربستان سعودی +966</option><option value="+91">هند +91</option>
-              </select>
+            <p className="welcome-intro">با ایمیل خود وارد شو. کُد تأیید به صندوق ایمیلت فرستاده می‌شود.</p>
+            <div className="google-email-form">
+              <label htmlFor="login-email">آدرس Gmail یا ایمیل</label>
+              <input
+                id="login-email"
+                type="email"
+                dir="ltr"
+                inputMode="email"
+                autoComplete="email"
+                value={emailAddress}
+                onChange={e=>{setEmailAddress(e.target.value);setNotice("");}}
+                placeholder="name@gmail.com"
+                disabled={emailOtpSent || authBusy}
+              />
+              {!emailOtpSent ? (
+                <button className="phone-signin" type="button" onClick={sendEmailCode} disabled={authBusy}>
+                  {authBusy ? "در حال فرستادن کُد..." : "فرستادن کُد به ایمیل"}
+                </button>
+              ) : <>
+                <label htmlFor="login-email-otp">کُد شش‌رقمی ایمیل</label>
+                <input
+                  id="login-email-otp"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  dir="ltr"
+                  maxLength={6}
+                  value={emailOtp}
+                  onChange={e=>setEmailOtp(e.target.value.replace(/[^0-9]/g,""))}
+                  placeholder="کُد شش‌رقمی"
+                  disabled={authBusy}
+                />
+                <button className="phone-signin" type="button" onClick={verifyEmailCode} disabled={authBusy}>
+                  {authBusy ? "در حال بررسی..." : "تأیید کُد و ورود"}
+                </button>
+                <button className="back-link" type="button" onClick={()=>{setEmailOtpSent(false);setEmailOtp("");setNotice("");}}>
+                  تغییر ایمیل یا فرستادن کُد دوباره
+                </button>
+              </>}
             </div>
-            <label className="login-label" htmlFor="login-phone">شماره تلفن</label>
-            <input id="login-phone" type="tel" dir="ltr" autoComplete="tel-national" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} placeholder="شماره خود را وارد کن" disabled={phoneOtpSent} />
-            {!phoneOtpSent ? <button className="phone-signin" type="button" onClick={sendPhoneCode} disabled={authBusy}>{authBusy ? "در حال ارسال..." : "ارسال کُد تأیید"}</button> : <>
-              <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
-              <input id="login-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک" />
-              <button className="phone-signin" type="button" onClick={verifyPhoneCode} disabled={authBusy}>{authBusy ? "در حال بررسی..." : "تأیید کُد و ورود"}</button>
-              <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>
-            </>}
+            <div className="welcome-divider"><span>روش دیگر ورود</span></div>
+            <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}>
+              <span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ادامه با حساب گوگل"}</span>
+            </button>
+            <details className="phone-fallback">
+              <summary>ورود با شماره تلفن</summary>
+              <div className="settings-group country-preview">
+                <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره</label>
+                <select id="login-country" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");}}>
+                  <option value="+93">🇦🇫 افغانستان +93</option>
+                  <option value="+98">🇮🇷 ایران +98</option>
+                </select>
+              </div>
+              <label className="login-label" htmlFor="login-phone">شماره تلفن</label>
+              <input id="login-phone" type="tel" dir="ltr" autoComplete="tel-national" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} placeholder="شماره خود را وارد کن" disabled={phoneOtpSent || authBusy} />
+              {!phoneOtpSent ? <button className="phone-signin" type="button" onClick={sendPhoneCode} disabled={authBusy}>ارسال کُد پیامک</button> : <>
+                <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
+                <input id="login-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک" />
+                <button className="phone-signin" type="button" onClick={verifyPhoneCode} disabled={authBusy}>تأیید کُد و ورود</button>
+              </>}
+            </details>
             {notice && <p className="notice" role="alert">{notice}</p>}
-            <p className="security-note">بدون تأیید کُد پیامک یا تأیید حساب گوگل، ورود انجام نمی‌شود. ورود آزمایشی با شماره‌های ثابت فقط پس از ثبت همان شماره‌ها و کُدها در تنظیمات امن Supabase ممکن است.</p>
+            <p className="security-note">رمز عبور ایمیل یا Gmail را وارد نکن. افغان‌چت فقط کُد یک‌بارمصرف را می‌گیرد؛ کُد را هم با هیچ‌کس شریک نساز.</p>
             <small>Afghan Chat</small>
           </div>
         </section>
