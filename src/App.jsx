@@ -130,6 +130,7 @@ export default function App() {
       }
       if (cancelled) return;
       setConversations(items);
+      setGroups(items.filter((item) => item.is_group).map((item) => ({ id: item.id, name: item.title || item.name, members: [] })));
       setActive((current) => items.find((item) => item.id === current?.id) || items[0] || { id: null, name: "هنوز گفتگویی نداری", photo: "" });
     }
     loadConversations();
@@ -406,6 +407,40 @@ export default function App() {
     } catch { setNotice("برای ضبط پیام صوتی، اجازهٔ استفاده از میکروفون را بده."); }
   }
 
+  async function createGroup(event) {
+    event.preventDefault();
+    const title = groupName.trim();
+    if (!authUser?.id || !title) { setNotice("نام گروه را وارد کن."); return; }
+    const requested = groupMember.split(",").map((name) => name.trim().replace(/^@/, "")).filter(Boolean);
+    setNotice("در حال ساخت گروه...");
+    const memberIds = [authUser.id];
+    if (requested.length) {
+      const { data: found, error: lookupError } = await supabase.from("profiles")
+        .select("id,username,display_name").in("username", requested);
+      if (lookupError) { setNotice("جستجوی اعضای گروه انجام نشد: " + lookupError.message); return; }
+      const matched = found || [];
+      const missing = requested.filter((name) => !matched.some((profile) => profile.username === name));
+      if (missing.length) { setNotice("این نام کاربری پیدا نشد: " + missing.join("، ")); return; }
+      for (const profile of matched) if (!memberIds.includes(profile.id)) memberIds.push(profile.id);
+    }
+    const { data: conversation, error: createError } = await supabase.from("conversations")
+      .insert({ title, is_group: true, created_by: authUser.id })
+      .select("id,title,is_group,created_at").single();
+    if (createError) { setNotice("ساخت گروه انجام نشد: " + createError.message); return; }
+    const rows = memberIds.map((user_id) => ({ conversation_id: conversation.id, user_id }));
+    const { error: memberError } = await supabase.from("conversation_members").insert(rows);
+    if (memberError) { setNotice("افزودن اعضا انجام نشد: " + memberError.message); return; }
+    const item = { ...conversation, name: title, photo: "" };
+    setConversations((items) => [item, ...items]);
+    setGroups((items) => [{ id: conversation.id, name: title, members: ["من", ...requested] }, ...items]);
+    setActive(item);
+    setGroupName("");
+    setGroupMember("");
+    setNotice("");
+    setPage("chats");
+    setMobileChatOpen(true);
+  }
+
   async function findFriend(event) {
     event.preventDefault();
     const value = phone.trim().replace(/^@/, "");
@@ -638,7 +673,7 @@ export default function App() {
         <div className="settings-group"><h3>کمک و دربارهٔ افغان چت</h3><p>نسخهٔ آزمایشی رابط کاربری افغان چت</p><p>برای پشتیبانی و گزارش مشکل، این بخش در نسخهٔ اصلی تکمیل می‌شود.</p><small>نسخه ۰.۱ · Afghan Chat</small></div>
 
         <p className="demo-warning">تنظیمات حساب و حریم خصوصی فعلاً روی سرور ذخیره نمی‌شوند.</p></section> : null}
-      {page === "groups" && <section className="content-page"><h2>گروه‌ها</h2><p>گروه تازه بساز و اعضا را اضافه کن.</p><form className="friend-form" onSubmit={e=>{e.preventDefault();if(groupName.trim()){setGroups(gs=>[{id:Date.now(),name:groupName.trim(),members:["من",...(groupMember.trim()?[groupMember.trim()]:[])]},...gs]);setGroupName("");setGroupMember("");}}}><label>نام گروه</label><input value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="مثلاً گروه دوستان"/><label>نام یک عضو (اختیاری)</label><input value={groupMember} onChange={e=>setGroupMember(e.target.value)} placeholder="نام دوست"/><button className="send" type="submit">ساخت گروه</button></form><div className="status-list"><h3>گروه‌های من</h3>{groups.map(g=><div className="status-card" key={g.id}><strong>{g.name}</strong><p>{g.members.length} عضو: {g.members.join("، ")}</p><button className="text-action" onClick={()=>setGroups(gs=>gs.filter(x=>x.id!==g.id))}>حذف گروه آزمایشی</button></div>)}</div><p className="demo-warning">ساخت و حذف گروه فعلاً فقط در همین گوشی انجام می‌شود.</p></section>}
+      {page === "groups" && <section className="content-page"><h2>گروه‌ها</h2><p>گروه تازه بساز و اعضا را اضافه کن.</p><form className="friend-form" onSubmit={createGroup}><label>نام گروه</label><input value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="مثلاً گروه دوستان"/><label>نام کاربری اعضا (با ویرگول جدا کن، اختیاری)</label><input dir="ltr" value={groupMember} onChange={e=>setGroupMember(e.target.value)} placeholder="username1, username2"/><button className="send" type="submit">ساخت گروه</button></form><div className="status-list"><h3>گروه‌های من</h3>{groups.map(g=><div className="status-card" key={g.id}><strong>{g.name}</strong><p>{g.members.length} عضو: {g.members.join("، ")}</p><button className="text-action" onClick={()=>setGroups(gs=>gs.filter(x=>x.id!==g.id))}>حذف گروه آزمایشی</button></div>)}</div><p className="demo-warning">گروه و اعضای آن در پایگاه داده ذخیره می‌شوند و برای اعضا همگام می‌گردند.</p></section>}
       {page === "account" && <section className="content-page"><h2>حساب من</h2><p>{authUser?.email || "حساب افغان‌چت"}</p><div className="settings-group"><p>ورود با Supabase فعال است. ورود با شماره تلفن پس از تنظیم سرویس پیامک فعال می‌شود.</p><button className="send" type="button" onClick={async()=>{await supabase.auth.signOut();setPage("welcome");}}>خروج از حساب</button></div></section>}
       {page === "more" && <section className="content-page more-page"><h2>بیشتر</h2><p>بخش‌های دیگر افغان چت</p><div className="more-menu">
         <button onClick={()=>setPage("friends")}><span>👥</span><strong>دوستان</strong><small>یافتن و افزودن دوست</small><b>‹</b></button>
