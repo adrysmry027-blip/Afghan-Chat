@@ -226,7 +226,7 @@ export default function App() {
 
   async function sendEmailCode() {
     const cleanEmail = emailAddress.trim().toLowerCase();
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setNotice("آدرس ایمیل را درست وارد کن.");
       return;
     }
@@ -251,7 +251,7 @@ export default function App() {
   async function verifyEmailCode() {
     const cleanEmail = emailAddress.trim().toLowerCase();
     const token = emailOtp.replace(/[^0-9]/g, "");
-    if (!/^\\d{6}$/.test(token)) {
+    if (!/^\d{6}$/.test(token)) {
       setNotice("کُد باید شش رقم باشد.");
       return;
     }
