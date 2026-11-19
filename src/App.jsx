@@ -28,6 +28,7 @@ export default function App() {
   const [myStatuses, setMyStatuses] = useState([]);
   const [callSession, setCallSession] = useState(null);
   const [displayName, setDisplayName] = useState("حساب من");
+  const [username, setUsername] = useState("");
   const [about, setAbout] = useState("خوش آمدی");
   const [language, setLanguage] = useState("دری");
   const [theme, setTheme] = useState("روشن");
@@ -71,6 +72,18 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!authUser?.id) { setUsername(""); return; }
+    supabase.from("profiles").select("username,display_name,about")
+      .eq("id", authUser.id).maybeSingle().then(({ data }) => {
+        if (data) {
+          setUsername(data.username || "");
+          setDisplayName(data.display_name || authUser.email?.split("@")[0] || "کاربر افغان چت");
+          setAbout(data.about || "");
+        }
+      });
+  }, [authUser?.id]);
 
   useEffect(() => {
     if (!authUser?.id) { setConversations([]); setMessages([]); return; }
@@ -297,7 +310,7 @@ export default function App() {
       </section> : page === "google-login" ? <section className="welcome-screen" dir="rtl"><div className="welcome-card login-card"><button className="back-link" type="button" onClick={()=>setPage("welcome")}>← بازگشت</button><div className="google-g large">G</div><h1>ورود امن با گوگل</h1><p className="welcome-intro">برای ورود، حساب گوگل را در صفحهٔ رسمی انتخاب کن.</p><button className="send" type="button" disabled={authBusy} onClick={loginWithGoogle}>{authBusy ? "در حال اتصال..." : "ادامه با Google"}</button><p className="security-note">رمز جیمیل را در افغان‌چت وارد نکن؛ تأیید هویت در صفحهٔ رسمی گوگل انجام می‌شود.</p>{notice && <p className="notice">{notice}</p>}</div></section>: null}
       {!["welcome","google-login"].includes(page) && <aside className="sidebar">
         <header className="brand"><div className="brand-mark"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div><div><h1>افغان چت</h1><p>Afghan Chat</p></div></header>
-        <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : <img src="/afghan-chat-logo.svg" alt="عکس پروفایل افغان چت"/>}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(file)setProfileImage(URL.createObjectURL(file));}}/><div><strong>{displayName}</strong><span>{about}</span></div></div>
+        <div className="profile"><button className="avatar self avatar-button" type="button" onClick={()=>avatarPicker.current?.click()}>{profileImage ? <img src={profileImage} alt="عکس پروفایل"/> : <img src="/afghan-chat-logo.svg" alt="عکس پروفایل افغان چت"/>}</button><input ref={avatarPicker} className="hidden-file" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(file)setProfileImage(URL.createObjectURL(file));}}/><div><strong>{displayName}</strong><span dir="ltr">@{username || "..."}</span></div></div>
         <div className="side-actions">
           <button className={page === "chats" ? "side-action active" : "side-action"} onClick={() => {setPage("chats");setMobileChatOpen(false);}}>گفتگوها</button>
           <button className={page === "friends" ? "side-action active" : "side-action"} onClick={() => setPage("friends")}>دوستان</button>
@@ -332,7 +345,7 @@ export default function App() {
         {notice && <p className="notice">{notice}</p>}
         <p className="demo-warning">برای پیدا کردن دوست، نام کاربری او را از خودش بگیر.</p>
       </section> : page === "settings" ? <section className="content-page settings-page"><h2>تنظیمات</h2><p>حساب و برنامهٔ افغان چت را مدیریت کن.</p>
-        <div className="settings-group"><h3>پروفایل من</h3><label>نام نمایشی<input value={displayName} onChange={e=>setDisplayName(e.target.value)} /></label><label>دربارهٔ من<input value={about} onChange={e=>setAbout(e.target.value)} /></label><small>تغییرات فعلاً در همین گوشی نمایش داده می‌شود.</small></div>
+        <div className="settings-group"><h3>پروفایل من</h3><label>نام نمایشی<input value={displayName} onChange={e=>setDisplayName(e.target.value)} /></label><label>دربارهٔ من<input value={about} onChange={e=>setAbout(e.target.value)} /></label><small>نام کاربری تو: @{username || "در حال بارگذاری"} — آن را برای افزودن دوست به او بده.</small></div>
         <div className="settings-group"><h3>حریم خصوصی</h3>
           <label className="setting-toggle"><span>نمایش آخرین بازدید</span><input type="checkbox" checked={privacy.lastSeen} onChange={e=>setPrivacy(p=>({...p,lastSeen:e.target.checked}))}/></label>
           <label className="setting-toggle"><span>نمایش عکس پروفایل</span><input type="checkbox" checked={privacy.photo} onChange={e=>setPrivacy(p=>({...p,photo:e.target.checked}))}/></label>
