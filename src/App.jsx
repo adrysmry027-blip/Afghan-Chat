@@ -50,6 +50,8 @@ export default function App() {
   const [emailAddress,setEmailAddress] = useState("");
   const [emailOtp,setEmailOtp] = useState("");
   const [emailOtpSent,setEmailOtpSent] = useState(false);
+  const [emailPassword,setEmailPassword] = useState("");
+  const [emailMode,setEmailMode] = useState("signin");
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
   const statusPicker = useRef(null);
@@ -192,43 +194,42 @@ export default function App() {
     setAuthBusy(false);
   }
 
-  async function sendEmailCode() {
+  async function submitEmailPassword() {
     const email = emailAddress.trim().toLowerCase();
+    const password = emailPassword;
     if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
       setNotice("نشانی جیمیل را درست وارد کن.");
       return;
     }
-    setAuthBusy(true);
-    setNotice("");
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { shouldCreateUser: true }
-      });
-      if (error) throw error;
-      setEmailOtpSent(true);
-      setNotice("درخواست فرستادن کُد ثبت شد. اگر تنظیمات ایمیل کامل باشد، کُد به جیمیل می‌رسد.");
-    } catch (error) {
-      setNotice("فرستادن کُد به جیمیل انجام نشد: " + (error.message || "تنظیمات ایمیل را بررسی کن."));
-    } finally { setAuthBusy(false); }
-  }
-
-  async function verifyEmailCode() {
-    const email = emailAddress.trim().toLowerCase();
-    const token = emailOtp.trim();
-    if (!/^\\d{6}$/.test(token)) {
-      setNotice("کُد جیمیل باید ۶ رقم باشد.");
+    if (password.length < 8) {
+      setNotice("رمز افغان چت باید دست‌کم ۸ حرف یا عدد داشته باشد.");
       return;
     }
     setAuthBusy(true);
     setNotice("");
     try {
-      const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
-      if (error) throw error;
-      setNotice("");
+      if (emailMode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { display_name: email.split("@")[0] } }
+        });
+        if (error) throw error;
+        if (data.session) {
+          setNotice("");
+        } else {
+          setNotice("حساب ساخته شد. اگر تأیید ایمیل در تنظیمات فعال باشد، برای فعال‌سازی باید ایمیل را تأیید کنی.");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        setNotice("");
+      }
     } catch (error) {
-      setNotice("کُد نادرست است یا اعتبارش تمام شده: " + error.message);
-    } finally { setAuthBusy(false); }
+      setNotice((emailMode === "signup" ? "ساخت حساب انجام نشد: " : "ورود انجام نشد: ") + error.message);
+    } finally {
+      setAuthBusy(false);
+    }
   }
 
   async function sendPhoneCode() {
@@ -374,17 +375,14 @@ export default function App() {
             <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
             <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
             <h1>ورود به افغان چت</h1>
-            <p className="welcome-intro">برای ورود، شماره را تأیید کن یا از حساب گوگل استفاده کن.</p>
-            <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}><span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ادامه با حساب گوگل"}</span></button>
-            <div className="welcome-divider"><span>یا ورود با جیمیل</span></div>
-            <label className="login-label" htmlFor="login-email">نشانی جیمیل</label>
-            <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com" disabled={emailOtpSent} />
-            {!emailOtpSent ? <button className="phone-signin" type="button" onClick={sendEmailCode} disabled={authBusy}>{authBusy ? "در حال ارسال..." : "فرستادن کُد به جیمیل"}</button> : <>
-              <label className="login-label" htmlFor="login-email-otp">کُد شش‌رقمی جیمیل</label>
-              <input id="login-email-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={emailOtp} onChange={e=>setEmailOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد جیمیل" />
-              <button className="phone-signin" type="button" onClick={verifyEmailCode} disabled={authBusy}>{authBusy ? "در حال بررسی..." : "تأیید کُد و ورود"}</button>
-              <button className="back-link" type="button" onClick={()=>{setEmailOtpSent(false);setEmailOtp("");setNotice("");}}>تغییر جیمیل</button>
-            </>}
+            <p className="welcome-intro">با جیمیل و رمز مخصوص افغان چت وارد شو.</p>
+            <div className="welcome-divider"><span>{emailMode === "signup" ? "ساخت حساب تازه" : "ورود با جیمیل"}</span></div>
+            <label className="login-label" htmlFor="login-email">جیمیل خود را وارد کن</label>
+            <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com" />
+            <label className="login-label" htmlFor="login-password">رمز عبور افغان چت</label>
+            <input id="login-password" type="password" dir="ltr" autoComplete={emailMode === "signup" ? "new-password" : "current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد" />
+            <button className="phone-signin" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : emailMode === "signup" ? "ساخت حساب" : "ورود به افغان چت"}</button>
+            <button className="back-link" type="button" onClick={()=>{setEmailMode(emailMode === "signup" ? "signin" : "signup");setNotice("");}}>{emailMode === "signup" ? "از قبل حساب داری؟ وارد شو" : "حساب نداری؟ حساب تازه بساز"}</button>
             <div className="welcome-divider"><span>یا ورود با شماره تلفن</span></div>
             <div className="settings-group country-preview">
               <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره</label>
