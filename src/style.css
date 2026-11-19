@@ -785,3 +785,8 @@ body{background:#edf3fb;color:#172b45}
 .onboarding-avatar img{width:100%;height:100%;object-fit:cover}
 .onboarding-photo-button{align-self:center;min-height:40px;padding:9px 16px;border-radius:12px}
 .onboarding-card .notice{margin-top:3px}
+
+.email-confirmed{
+  margin:0;padding:11px 13px;border:1px solid #dce8f7;border-radius:11px;
+  background:#f3f7fd;color:#315a87;font-size:13px;text-align:left;overflow-wrap:anywhere
+}
