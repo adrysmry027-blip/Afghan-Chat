@@ -55,7 +55,41 @@ export default function App() {
   const statusPicker = useRef(null);
   const avatarPicker = useRef(null);
 
-  useEffect(() => onAuthStateChanged(auth, (user) => {\n    setAuthUser(user);\n    setLoggedIn(Boolean(user));\n    if (user) { setDisplayName(user.displayName || user.phoneNumber || "کاربر افغان چت"); setPage("chats"); }\n  }), []);\n\n  async function loginWithGoogle() {\n    setAuthBusy(true);\n    try { await signInWithPopup(auth, googleProvider); setNotice(""); }\n    catch (error) { setNotice(error.code === "auth/popup-blocked" ? "مرورگر پنجرهٔ ورود گوگل را بسته است؛ در مرورگر اصلی دوباره تلاش کن." : `ورود گوگل ناموفق شد: ${error.message}`); }\n    finally { setAuthBusy(false); }\n  }\n\n  async function requestPhoneCode() {\n    const digits = loginPhone.replace(/\\D/g, "");\n    if (!digits) { setNotice("شماره تلفن را وارد کن."); return; }\n    const fullPhone = `${loginCountry}${digits}`;\n    setAuthBusy(true);\n    try {\n      if (!recaptcha.current) recaptcha.current = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });\n      confirmation.current = await signInWithPhoneNumber(auth, fullPhone, recaptcha.current);\n      setLoginStep(true); setNotice("کد تأیید به شماره‌ات پیامک شد.");\n    } catch (error) { setNotice(`ارسال کد انجام نشد: ${error.message}`); recaptcha.current?.clear(); recaptcha.current = null; }\n    finally { setAuthBusy(false); }\n  }\n\n  async function verifyPhoneCode() {\n    if (!confirmation.current || !loginCode.trim()) { setNotice("کد پیامک‌شده را وارد کن."); return; }\n    setAuthBusy(true);\n    try { await confirmation.current.confirm(loginCode.trim()); setNotice(""); }\n    catch (error) { setNotice(`کد تأیید درست نیست: ${error.message}`); }\n    finally { setAuthBusy(false); }\n  }\n\n  function openCall(contact, media) {
+  useEffect(() => onAuthStateChanged(auth, (user) => {
+    setAuthUser(user);
+    setLoggedIn(Boolean(user));
+    if (user) { setDisplayName(user.displayName || user.phoneNumber || "کاربر افغان چت"); setPage("chats"); }
+  }), []);
+
+  async function loginWithGoogle() {
+    setAuthBusy(true);
+    try { await signInWithPopup(auth, googleProvider); setNotice(""); }
+    catch (error) { setNotice(error.code === "auth/popup-blocked" ? "مرورگر پنجرهٔ ورود گوگل را بسته است؛ در مرورگر اصلی دوباره تلاش کن." : `ورود گوگل ناموفق شد: ${error.message}`); }
+    finally { setAuthBusy(false); }
+  }
+
+  async function requestPhoneCode() {
+    const digits = loginPhone.replace(/\\D/g, "");
+    if (!digits) { setNotice("شماره تلفن را وارد کن."); return; }
+    const fullPhone = `${loginCountry}${digits}`;
+    setAuthBusy(true);
+    try {
+      if (!recaptcha.current) recaptcha.current = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
+      confirmation.current = await signInWithPhoneNumber(auth, fullPhone, recaptcha.current);
+      setLoginStep(true); setNotice("کد تأیید به شماره‌ات پیامک شد.");
+    } catch (error) { setNotice(`ارسال کد انجام نشد: ${error.message}`); recaptcha.current?.clear(); recaptcha.current = null; }
+    finally { setAuthBusy(false); }
+  }
+
+  async function verifyPhoneCode() {
+    if (!confirmation.current || !loginCode.trim()) { setNotice("کد پیامک‌شده را وارد کن."); return; }
+    setAuthBusy(true);
+    try { await confirmation.current.confirm(loginCode.trim()); setNotice(""); }
+    catch (error) { setNotice(`کد تأیید درست نیست: ${error.message}`); }
+    finally { setAuthBusy(false); }
+  }
+
+  function openCall(contact, media) {
     setCallSession(createCallSession({ contact, media }));
   }
 
