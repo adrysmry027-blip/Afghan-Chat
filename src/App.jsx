@@ -298,10 +298,10 @@ export default function App() {
     const value = phone.trim();
     if (!value) { setNotice("شماره تلفن یا نام کاربری دوستت را وارد کن."); return; }
     setNotice("");
-    const normalizedPhone = value.replace(/[\\s()-]/g, "");
+    const normalizedPhone = value.replace(/[\s()-]/g, "");
     let friend = null;
     let lookupError = null;
-    if (/^\\+(93|98)[0-9]{7,12}$/.test(normalizedPhone)) {
+    if (/^\+(93|98)[0-9]{7,12}$/.test(normalizedPhone)) {
       const { data, error } = await supabase.rpc("find_user_by_phone", { p_phone: normalizedPhone });
       lookupError = error;
       friend = Array.isArray(data) ? data[0] : data;
