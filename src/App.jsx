@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { onAuthStateChanged, signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
 import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
@@ -46,7 +46,7 @@ export default function App() {
   const [statusAudience,setStatusAudience] = useState("همهٔ دوستان");
   const [statusReplies,setStatusReplies] = useState({});
   const [loginEmail,setLoginEmail] = useState("");
-  const [loginPassword,setLoginPassword] = useState("");
+  const [loginCountry,setLoginCountry] = useState("+93");
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
   const statusPicker = useRef(null);
@@ -58,42 +58,23 @@ export default function App() {
     if (user) { setDisplayName(user.displayName || user.phoneNumber || "کاربر افغان چت"); setPage("chats"); }
   }), []);
 
-  async function loginWithEmail() {
+  async function loginWithGoogle() {
     const email = loginEmail.trim();
-    if (!email || !loginPassword) { setNotice("ایمیل و رمز عبور افغان‌چت را وارد کن."); return; }
+    if (!email) { setNotice("اول نشانی جیمیل خود را وارد کن."); return; }
     setAuthBusy(true);
     try {
-      await signInWithEmailAndPassword(auth, email, loginPassword);
+      googleProvider.setCustomParameters({ prompt: "select_account", login_hint: email });
+      await signInWithPopup(auth, googleProvider);
       setNotice("");
     } catch (error) {
       const errors = {
-        "auth/invalid-credential": "ایمیل یا رمز عبور درست نیست. اگر حساب نداری، اول حساب بساز.",
-        "auth/user-not-found": "این ایمیل حساب افغان‌چت ندارد؛ گزینهٔ ساخت حساب را بزن.",
-        "auth/wrong-password": "رمز عبور افغان‌چت نادرست است.",
-        "auth/invalid-email": "نشانی ایمیل درست نیست.",
-        "auth/too-many-requests": "تلاش‌های زیادی انجام شد؛ کمی بعد دوباره کوشش کن.",
+        "auth/popup-closed-by-user": "صفحهٔ ورود گوگل بسته شد؛ دوباره تلاش کن.",
+        "auth/popup-blocked": "بازشدن صفحهٔ گوگل مسدود شد؛ از مرورگر یا نسخهٔ پشتیبانی‌شده استفاده کن.",
+        "auth/unauthorized-domain": "دامنهٔ برنامه هنوز در تنظیمات Firebase مجاز نشده است.",
+        "auth/operation-not-allowed": "ورود با گوگل هنوز در Firebase فعال نشده است.",
         "auth/network-request-failed": "اتصال اینترنت برقرار نیست؛ اینترنت را بررسی کن."
       };
-      setNotice(errors[error.code] || "ورود انجام نشد. دوباره تلاش کن.");
-    } finally { setAuthBusy(false); }
-  }
-
-  async function createEmailAccount() {
-    const email = loginEmail.trim();
-    if (!email || !loginPassword) { setNotice("ایمیل و رمز عبور افغان‌چت را وارد کن."); return; }
-    if (loginPassword.length < 6) { setNotice("رمز عبور باید دست‌کم ۶ حرف یا عدد داشته باشد."); return; }
-    setAuthBusy(true);
-    try {
-      await createUserWithEmailAndPassword(auth, email, loginPassword);
-      setNotice("");
-    } catch (error) {
-      const errors = {
-        "auth/email-already-in-use": "برای این ایمیل قبلاً حساب ساخته شده؛ گزینهٔ ورود را بزن.",
-        "auth/invalid-email": "نشانی ایمیل درست نیست.",
-        "auth/weak-password": "رمز عبور ضعیف است؛ دست‌کم ۶ حرف یا عدد انتخاب کن.",
-        "auth/network-request-failed": "اتصال اینترنت برقرار نیست؛ اینترنت را بررسی کن."
-      };
-      setNotice(errors[error.code] || "ساخت حساب انجام نشد. دوباره تلاش کن.");
+      setNotice(errors[error.code] || "ورود با گوگل انجام نشد. تنظیمات ورود گوگل را بررسی کن.");
     } finally { setAuthBusy(false); }
   }
 
@@ -152,15 +133,23 @@ export default function App() {
             <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
             <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
             <h1>ورود به افغان چت</h1>
-            <p className="welcome-intro">ایمیل و رمز عبور حساب افغان‌چت خود را وارد کن.</p>
-            <label className="login-label" htmlFor="login-email">ایمیل (جیمیل)</label>
+            <p className="welcome-intro">جیمیل خود را وارد کن؛ سپس در صفحهٔ امن گوگل رمز عبورت را بنویس.</p>
+            <label className="login-label" htmlFor="login-email">جیمیل</label>
             <input id="login-email" type="email" dir="ltr" autoComplete="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} placeholder="name@gmail.com" />
-            <label className="login-label" htmlFor="login-password">رمز عبور افغان‌چت</label>
-            <input id="login-password" type="password" dir="ltr" autoComplete="current-password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} placeholder="رمز عبور خود را وارد کن" />
-            <button className="phone-signin" type="button" onClick={loginWithEmail} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ورود"}</button>
-            <button className="google-signin" type="button" onClick={createEmailAccount} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ساخت حساب جدید"}</button>
+            <button className="phone-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ورود به افغان‌چت"}</button>
+            <div className="settings-group country-preview">
+              <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره (فعلاً غیرفعال)</label>
+              <select id="login-country" value={loginCountry} onChange={e=>setLoginCountry(e.target.value)}>
+                <option value="+93">افغانستان +93</option><option value="+98">ایران +98</option>
+                <option value="+92">پاکستان +92</option><option value="+992">تاجیکستان +992</option>
+                <option value="+998">ازبکستان +998</option><option value="+993">ترکمنستان +993</option>
+                <option value="+90">ترکیه +90</option><option value="+971">امارات +971</option>
+                <option value="+966">عربستان سعودی +966</option><option value="+91">هند +91</option>
+              </select>
+              <p className="setting-hint">ورود با شماره تلفن هنوز فعال نیست.</p>
+            </div>
             {notice && <p className="notice" role="alert">{notice}</p>}
-            <p className="security-note">این رمز، رمز جداگانهٔ افغان‌چت است؛ رمز اصلی جیمیل خود را اینجا وارد نکن.</p>
+            <p className="security-note">رمز جیمیل فقط در صفحهٔ رسمی گوگل وارد می‌شود؛ افغان‌چت آن را نمی‌بیند و ذخیره نمی‌کند.</p>
             <small>Afghan Chat</small>
           </div>
         </section>
