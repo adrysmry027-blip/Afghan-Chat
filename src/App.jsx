@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { onAuthStateChanged, signInWithPopup } from "firebase/auth";
+import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
 import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
@@ -46,6 +46,7 @@ export default function App() {
   const [statusAudience,setStatusAudience] = useState("همهٔ دوستان");
   const [statusReplies,setStatusReplies] = useState({});
   const [loginEmail,setLoginEmail] = useState("");
+  const [loginPassword,setLoginPassword] = useState("");
   const [loginCountry,setLoginCountry] = useState("+93");
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
@@ -58,23 +59,34 @@ export default function App() {
     if (user) { setDisplayName(user.displayName || user.phoneNumber || "کاربر افغان چت"); setPage("chats"); }
   }), []);
 
-  async function loginWithGoogle() {
+  async function loginWithAppPassword() {
     const email = loginEmail.trim();
+    const password = loginPassword;
     if (!email) { setNotice("اول نشانی جیمیل خود را وارد کن."); return; }
+    if (password.length < 6) { setNotice("رمز افغان‌چت باید دست‌کم ۶ حرف یا عدد داشته باشد."); return; }
     setAuthBusy(true);
     try {
-      googleProvider.setCustomParameters({ prompt: "select_account", login_hint: email });
-      await signInWithPopup(auth, googleProvider);
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        if (error.code === "auth/user-not-found") {
+          await createUserWithEmailAndPassword(auth, email, password);
+        } else {
+          throw error;
+        }
+      }
       setNotice("");
     } catch (error) {
       const errors = {
-        "auth/popup-closed-by-user": "صفحهٔ ورود گوگل بسته شد؛ دوباره تلاش کن.",
-        "auth/popup-blocked": "بازشدن صفحهٔ گوگل مسدود شد؛ از مرورگر یا نسخهٔ پشتیبانی‌شده استفاده کن.",
-        "auth/unauthorized-domain": "دامنهٔ برنامه هنوز در تنظیمات Firebase مجاز نشده است.",
-        "auth/operation-not-allowed": "ورود با گوگل هنوز در Firebase فعال نشده است.",
+        "auth/email-already-in-use": "این جیمیل قبلاً ثبت شده است؛ رمز درست را وارد کن.",
+        "auth/wrong-password": "رمز افغان‌چت درست نیست.",
+        "auth/invalid-credential": "جیمیل یا رمز افغان‌چت درست نیست.",
+        "auth/invalid-email": "نشانی جیمیل درست نیست.",
+        "auth/weak-password": "رمز باید دست‌کم ۶ حرف یا عدد داشته باشد.",
+        "auth/operation-not-allowed": "ورود با جیمیل و رمز هنوز در تنظیمات Firebase فعال نشده است.",
         "auth/network-request-failed": "اتصال اینترنت برقرار نیست؛ اینترنت را بررسی کن."
       };
-      setNotice(errors[error.code] || "ورود با گوگل انجام نشد. تنظیمات ورود گوگل را بررسی کن.");
+      setNotice(errors[error.code] || "ورود انجام نشد. تنظیمات حساب را بررسی کن.");
     } finally { setAuthBusy(false); }
   }
 
@@ -133,10 +145,12 @@ export default function App() {
             <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
             <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
             <h1>ورود به افغان چت</h1>
-            <p className="welcome-intro">جیمیل خود را وارد کن؛ سپس در صفحهٔ امن گوگل رمز عبورت را بنویس.</p>
+            <p className="welcome-intro">جیمیل و رمز جداگانهٔ افغان‌چت خود را وارد کن.</p>
             <label className="login-label" htmlFor="login-email">جیمیل</label>
             <input id="login-email" type="email" dir="ltr" autoComplete="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} placeholder="name@gmail.com" />
-            <button className="phone-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ورود به افغان‌چت"}</button>
+            <label className="login-label" htmlFor="login-password">رمز عبور</label>
+            <input id="login-password" type="password" dir="ltr" autoComplete="current-password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} placeholder="رمز دلخواه افغان‌چت" />
+            <button className="phone-signin" type="button" onClick={loginWithAppPassword} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ورود به افغان‌چت"}</button>
             <div className="settings-group country-preview">
               <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره (فعلاً غیرفعال)</label>
               <select id="login-country" value={loginCountry} onChange={e=>setLoginCountry(e.target.value)}>
@@ -149,7 +163,7 @@ export default function App() {
               <p className="setting-hint">ورود با شماره تلفن هنوز فعال نیست.</p>
             </div>
             {notice && <p className="notice" role="alert">{notice}</p>}
-            <p className="security-note">رمز جیمیل فقط در صفحهٔ رسمی گوگل وارد می‌شود؛ افغان‌چت آن را نمی‌بیند و ذخیره نمی‌کند.</p>
+            <p className="security-note">این رمز فقط برای حساب افغان‌چت است و با رمز جیمیل فرق دارد. بار اول حساب ساخته می‌شود و دفعات بعد با همان رمز وارد می‌شوی.</p>
             <small>Afghan Chat</small>
           </div>
         </section>
