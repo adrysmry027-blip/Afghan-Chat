@@ -653,3 +653,38 @@ body{background:#dce3e7;color:var(--wa-text)}
  .welcome-card{border-radius:20px;padding:23px 19px;gap:10px}
  .welcome-card h1{font-size:23px}
 }
+
+
+/* Afghan Chat: blue-and-white WhatsApp-inspired finish */
+:root{--ac-blue:#0757b8;--ac-blue-dark:#073b7a;--ac-blue-soft:#eaf3ff}
+body{background:linear-gradient(135deg,#eaf2fc 0%,#f8fbff 55%,#e7f0fc 100%)}
+.app-shell{border-color:#dce8f7;box-shadow:0 24px 80px rgba(7,59,122,.13)}
+.sidebar{background:linear-gradient(180deg,var(--ac-blue) 0%,var(--ac-blue-dark) 100%)}
+.profile{background:rgba(255,255,255,.13)}
+.side-action.active,.side-action:hover{color:var(--ac-blue)}
+.chat-item.selected,.chat-item:hover{background:rgba(255,255,255,.15)}
+.chat-meta i{color:var(--ac-blue)}
+.conversation-head{background:linear-gradient(105deg,var(--ac-blue),var(--ac-blue-dark));box-shadow:0 5px 18px rgba(7,59,122,.13)}
+.conversation-head .avatar{color:var(--ac-blue)}
+.messages{background-color:#f5f9ff;background-image:radial-gradient(#dce8f7 1px,transparent 1px)}
+.date-chip{background:#e7f0ff;color:#456b9b}
+.mine .bubble{background:#dcecff;border-color:#cbdfff}
+.composer input:focus{border-color:#4b8edb}
+.attach,.secondary-action,.status-tools button{background:#eaf3ff;color:var(--ac-blue);border-color:#d6e6fb}
+.send,.phone-signin,.call-close{background:linear-gradient(135deg,#0875e1,#064b9b);border-color:#0757b8;box-shadow:0 5px 13px rgba(7,87,184,.18)}
+.content-page h2,.settings-group h3{color:var(--ac-blue)}
+.welcome-screen{background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.35),transparent 42%),linear-gradient(155deg,#0875e1 0%,#0757b8 48%,#073b7a 100%)}
+.welcome-kicker{color:#2477ce}
+.welcome-logo{background:linear-gradient(145deg,#e7f1ff,#fff)}
+.mobile-bottom-nav{background:#fff;border-top:1px solid #e4edf8;box-shadow:0 -6px 22px rgba(7,59,122,.08)}
+.mobile-bottom-nav button.active{color:var(--ac-blue)}
+@media(max-width:680px){
+ .sidebar{background:linear-gradient(105deg,var(--ac-blue),var(--ac-blue-dark))}
+ .mobile-bottom-nav{padding-bottom:env(safe-area-inset-bottom)}
+ .conversation-head{background:linear-gradient(105deg,var(--ac-blue),var(--ac-blue-dark))}
+ .mine .bubble{background:#dcecff}
+}
+.dark-theme .sidebar{background:linear-gradient(180deg,#073b7a,#062d5c)}
+.dark-theme .conversation-head{background:linear-gradient(105deg,#073b7a,#062d5c)}
+.dark-theme .mobile-bottom-nav{background:#172536;border-color:#30465f}
+.dark-theme .mobile-bottom-nav button.active{color:#7eb5ff}
