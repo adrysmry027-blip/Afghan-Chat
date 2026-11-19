@@ -380,11 +380,27 @@ export default function App() {
       const media = new MediaRecorder(stream);
       const chunks = [];
       media.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-      media.onstop = () => {
+      const recordingConversationId = active?.id;
+      const recordingUserId = authUser?.id;
+      media.onstop = async () => {
         const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        setMessages((items) => [...items, { id: Date.now(), from: "me", type: "audio", url }]);
         stream.getTracks().forEach((track) => track.stop());
+        if (!recordingConversationId || !recordingUserId || !blob.size) return;
+        const extension = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
+        const objectPath = recordingConversationId + "/" + recordingUserId + "/" + Date.now() + "-voice." + extension;
+        setNotice("در حال فرستادن پیام صوتی...");
+        const { error: uploadError } = await supabase.storage.from("chat-media").upload(objectPath, blob, { contentType: blob.type || "audio/webm" });
+        if (uploadError) { setNotice("بارگذاری پیام صوتی انجام نشد: " + uploadError.message); return; }
+        const { error: messageError } = await supabase.from("messages").insert({
+          conversation_id: recordingConversationId, sender_id: recordingUserId,
+          body: "پیام صوتی", message_type: "audio", media_url: objectPath
+        });
+        if (messageError) {
+          await supabase.storage.from("chat-media").remove([objectPath]);
+          setNotice("ثبت پیام صوتی انجام نشد: " + messageError.message);
+          return;
+        }
+        setNotice("");
       };
       recorder.current = media; media.start(); setRecording(true);
     } catch { setNotice("برای ضبط پیام صوتی، اجازهٔ استفاده از میکروفون را بده."); }
@@ -395,9 +411,20 @@ export default function App() {
     const value = phone.trim().replace(/^@/, "");
     if (!value) { setNotice("نام کاربری دوستت را وارد کن."); return; }
     setNotice("");
-    const { data: friend, error } = await supabase.from("profiles")
-      .select("id,username,display_name").eq("username", value).maybeSingle();
-    if (error || !friend) { setNotice("این نام کاربری پیدا نشد. دوستت باید اول در افغان‌چت حساب بسازد."); return; }
+    let friend = null;
+    if (/^\\+?(93|98)\\d{7,12}$/.test(value.replace(/[\\s()-]/g, ""))) {
+      const phoneValue = value.replace(/[\\s()-]/g, "");
+      const normalizedPhone = phoneValue.startsWith("+") ? phoneValue : "+" + phoneValue;
+      const { data, error } = await supabase.rpc("find_user_by_phone", { p_phone: normalizedPhone });
+      if (error) { setNotice("جستجوی شماره انجام نشد: " + error.message); return; }
+      friend = data?.[0] || null;
+    } else {
+      const { data, error } = await supabase.from("profiles")
+        .select("id,username,display_name").eq("username", value).maybeSingle();
+      if (error) { setNotice("جستجوی دوست انجام نشد: " + error.message); return; }
+      friend = data;
+    }
+    if (!friend) { setNotice("این شماره یا نام کاربری پیدا نشد. دوستت باید حساب افغان چت داشته باشد."); return; }
     if (friend.id === authUser.id) { setNotice("این نام کاربری متعلق به خودت است."); return; }
     const { data: conversation, error: createError } = await supabase.from("conversations")
       .insert({ title: friend.display_name, is_group: false, created_by: authUser.id })
