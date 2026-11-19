@@ -197,7 +197,7 @@ export default function App() {
   async function submitEmailPassword() {
     const email = emailAddress.trim().toLowerCase();
     const password = emailPassword;
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setNotice("نشانی جیمیل را درست وارد کن.");
       return;
     }
