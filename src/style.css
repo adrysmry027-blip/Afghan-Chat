@@ -773,3 +773,23 @@ body{background:#edf3fb;color:#172b45}
   .mine .bubble{background:#dcecff}
 }
 .dark-theme .sidebar{background:#fff!important}
+
+
+/* Email-first WhatsApp-style sign-in */
+.google-email-form{direction:rtl;text-align:right;gap:11px}
+.google-email-form input{min-height:48px;background:#fbfdfb;border-color:#dce8df}
+.google-email-form input:focus{outline:2px solid #b8dec2;border-color:#26834b}
+.google-email-form .phone-signin{min-height:49px;margin-top:3px;background:#176b3a}
+.phone-fallback{margin-top:14px;text-align:right;border:1px solid #e5eee7;border-radius:13px;padding:12px 14px;background:#fbfdfb}
+.phone-fallback summary{cursor:pointer;color:#52715b;font-size:12px;font-weight:700}
+.phone-fallback .settings-group{margin:12px 0;padding:12px}
+.phone-fallback input{width:100%;min-height:44px;border:1px solid #dfe8e1;border-radius:11px;padding:12px;font:inherit;margin:7px 0 10px}
+.phone-fallback .phone-signin{width:100%;min-height:44px}
+.login-card .welcome-logo{margin-bottom:14px}
+.login-card .welcome-kicker{margin-top:0}
+@media(max-width:520px){
+  .login-card{max-height:calc(100dvh - 24px);overflow:auto}
+  .phone-fallback{padding:10px 12px}
+}
+.dark-theme .phone-fallback{background:#24352a;border-color:#405448}
+.dark-theme .phone-fallback summary{color:#b6c5ba}
