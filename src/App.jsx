@@ -158,7 +158,7 @@ export default function App() {
   async function verifyPhoneCode() {
     const digits = phoneNumber.replace(/[^0-9]/g, "");
     const fullPhone = loginCountry + digits.replace(/^0+/, "");
-    if (!/^\\d{6}$/.test(phoneOtp.trim())) { setNotice("کُد باید ۶ رقم باشد."); return; }
+    if (!/^\d{6}$/.test(phoneOtp.trim())) { setNotice("کُد باید ۶ رقم باشد."); return; }
     setAuthBusy(true);
     setNotice("");
     try {
