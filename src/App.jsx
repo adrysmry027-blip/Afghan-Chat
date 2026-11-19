@@ -50,6 +50,7 @@ export default function App() {
   const [phoneNumber,setPhoneNumber] = useState("");
   const [phoneOtp,setPhoneOtp] = useState("");
   const [phoneOtpSent,setPhoneOtpSent] = useState(false);
+  const [phoneChannel,setPhoneChannel] = useState("sms");
   const [emailAddress,setEmailAddress] = useState("");
   const [emailOtp,setEmailOtp] = useState("");
   const [emailOtpSent,setEmailOtpSent] = useState(false);
@@ -276,10 +277,10 @@ export default function App() {
     setAuthBusy(true);
     setNotice("");
     try {
-      const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+      const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone, options: { channel: phoneChannel } });
       if (error) throw error;
       setPhoneOtpSent(true);
-      setNotice("کُد تأیید ارسال شد. کُد پیامک را وارد کن.");
+      setNotice(phoneChannel === "whatsapp" ? "درخواست کُد واتساپ ارسال شد. کُد پیام را وارد کن." : "درخواست کُد پیامکی ارسال شد. کُد پیامک را وارد کن.");
     } catch (error) {
       setNotice("ارسال کُد انجام نشد: " + (error.message || "تنظیمات پیامک هنوز کامل نیست."));
     } finally { setAuthBusy(false); }
@@ -488,8 +489,12 @@ export default function App() {
             <select aria-label="کشور" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>
               <option value="+93">افغانستان</option><option value="+98">ایران</option><option value="+992">تاجیکستان</option><option value="+998">ازبکستان</option><option value="+90">ترکیه</option>
             </select>
-            {!phoneOtpSent ? <div className="wa-phone-number"><span>{loginCountry}</span><input aria-label="شماره تلفن" type="tel" inputMode="numeric" autoComplete="tel-national" dir="ltr" value={phoneNumber} onChange={e=>{setPhoneNumber(e.target.value.replace(/[^0-9]/g,""));setNotice("");}} placeholder="شماره تلفن"/></div> : <>
-              <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
+            {!phoneOtpSent ? <>
+              <label className="login-label" htmlFor="phone-channel">روش دریافت کُد تأیید</label>
+              <select id="phone-channel" aria-label="روش دریافت کُد تأیید" value={phoneChannel} onChange={e=>{setPhoneChannel(e.target.value);setNotice("");}}><option value="sms">پیامک معمولی (SMS)</option><option value="whatsapp">واتساپ (WhatsApp)</option></select>
+              <div className="wa-phone-number"><span>{loginCountry}</span><input aria-label="شماره تلفن" type="tel" inputMode="numeric" autoComplete="tel-national" dir="ltr" value={phoneNumber} onChange={e=>{setPhoneNumber(e.target.value.replace(/[^0-9]/g,""));setNotice("");}} placeholder="شماره تلفن"/></div>
+            </> : <>
+              <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی {phoneChannel === "whatsapp" ? "واتساپ" : "پیامک"}</label>
               <input id="login-otp" className="wa-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک"/>
             </>}
             <button className="wa-next" type="button" disabled={authBusy || (!phoneOtpSent && phoneNumber.replace(/\D/g,"").length<6) || (phoneOtpSent && phoneOtp.length!==6)} onClick={phoneOtpSent?verifyPhoneCode:sendPhoneCode}>{authBusy?(phoneOtpSent?"در حال بررسی...":"در حال ارسال..."):phoneOtpSent?"تأیید و ادامه":"بعدی"}</button>
