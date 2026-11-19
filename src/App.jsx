@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, googleProvider } from "./firebase";
+import { onValue, push, ref } from "firebase/database";
+import { auth, database, googleProvider } from "./firebase";
 import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
 
@@ -19,10 +20,7 @@ export default function App() {
   const [active, setActive] = useState(demoChats[0]);
   const [message, setMessage] = useState("");
   const [phone, setPhone] = useState("");
-  const [messages, setMessages] = useState([
-    { id: 1, from: "them", text: "سلام! به افغان چت خوش آمدی." },
-    { id: 2, from: "me", text: "سلام، تشکر!" }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [notice, setNotice] = useState("");
   const filePicker = useRef(null);
   const recorder = useRef(null);
@@ -59,6 +57,18 @@ export default function App() {
     if (user) { setDisplayName(user.displayName || user.phoneNumber || "کاربر افغان چت"); setPage("chats"); }
   }), []);
 
+  useEffect(() => {
+    if (!authUser?.uid || !active?.id) { setMessages([]); return; }
+    const messagesRef = ref(database, `users/${authUser.uid}/chats/${active.id}/messages`);
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
+      const value = snapshot.val() || {};
+      const items = Object.entries(value).map(([id, item]) => ({ id, ...item }));
+      items.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      setMessages(items);
+    }, (error) => setNotice("خواندن پیام‌ها انجام نشد؛ قوانین دیتابیس را بررسی کن."));
+    return unsubscribe;
+  }, [authUser?.uid, active?.id]);
+
   async function loginWithAppPassword() {
     const email = loginEmail.trim();
     const password = loginPassword;
@@ -94,12 +104,18 @@ export default function App() {
     setCallSession(createCallSession({ contact, media }));
   }
 
-  function sendMessage(event) {
+  async function sendMessage(event) {
     event.preventDefault();
     const value = message.trim();
-    if (!value) return;
-    setMessages((items) => [...items, { id: Date.now(), from: "me", text: value }]);
-    setMessage("");
+    if (!value || !authUser?.uid || !active?.id) return;
+    try {
+      const messagesRef = ref(database, `users/${authUser.uid}/chats/${active.id}/messages`);
+      await push(messagesRef, { from: "me", text: value, createdAt: Date.now() });
+      setMessage("");
+      setNotice("");
+    } catch (error) {
+      setNotice("پیام ذخیره نشد. اتصال اینترنت و قوانین Realtime Database را بررسی کن.");
+    }
   }
 
   function addAttachment(event) {
@@ -205,7 +221,7 @@ export default function App() {
         <header className="conversation-head"><button className="mobile-back" type="button" onClick={()=>setMobileChatOpen(false)} aria-label="بازگشت به گفتگوها">‹</button><div className="avatar green">{active.photo ? <img src={active.photo} alt={active.name}/> : active.name.slice(0, 1)}</div><div className="contact-title"><strong>{active.name}</strong><span>گفتگوی آزمایشی</span></div><div className="call-actions"><button type="button" title="تماس صوتی" onClick={() => openCall(active.name, "voice")}>☎</button><button type="button" title="تماس تصویری" onClick={() => openCall(active.name, "video")}>▣</button></div><button className="more" aria-label="گزینه‌ها">•••</button></header>
         <div className="messages"><div className="date-chip">امروز</div>{messages.map((item) => <div className={"bubble-row " + (item.from === "me" ? "mine" : "")} key={item.id}><div className="bubble">{item.type === "image" ? <img className="message-media" src={item.url} alt="عکس فرستاده‌شده" /> : item.type === "video" ? <video className="message-media" src={item.url} controls /> : item.type === "audio" ? <audio src={item.url} controls /> : item.type === "file" ? <a href={item.url} download={item.name}>{item.name}</a> : item.text}<small>{item.from === "me" ? "در همین گوشی" : "دریافت شد"}</small></div>{item.from === "me" && <button className="delete" title="حذف پیام" onClick={() => setMessages((all) => all.filter((m) => m.id !== item.id))}>حذف</button>}</div>)}</div>
         <form className="composer" onSubmit={sendMessage}><input ref={filePicker} className="hidden-file" type="file" accept="image/*,video/*,audio/*" onChange={addAttachment} /><button className="attach" type="button" title="فرستادن عکس یا ویدیو" onClick={() => filePicker.current?.click()}>＋</button><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="پیامت را بنویس..." aria-label="متن پیام" /><button className={recording ? "record recording" : "record"} type="button" title={recording ? "پایان ضبط" : "ضبط پیام صوتی"} onClick={toggleRecording}>{recording ? "■" : "🎙"}</button><button className="send" type="submit">ارسال</button></form>
-        {notice && <button className="notice chat-notice" onClick={() => setNotice("")}>{notice}  ✕</button>}<p className="demo-warning">عکس، ویدیو و صدای ضبط‌شده فعلاً فقط در همین گوشی نمایش داده می‌شود؛ برای ارسال واقعی به دیگران سرور لازم است.</p>
+        {notice && <button className="notice chat-notice" onClick={() => setNotice("")}>{notice}  ✕</button>}<p className="demo-warning">پیام‌های متنی این گفتگو در حساب خودت در Firebase ذخیره می‌شوند. گفتگوی واقعی با کاربران دیگر، افزودن دوستان و رسانه‌ها هنوز جداگانه باید راه‌اندازی شود.</p>
       </section> : page === "status" ? <section className="content-page"><h2>وضعیت‌ها</h2><p>عکس، ویدیو یا نوشته‌ات را به مدت ۲۴ ساعت با دوستان شریک کن.</p>
         <input ref={statusPicker} className="hidden-file" type="file" accept="image/*,video/*" onChange={e=>{const file=e.target.files?.[0];if(file)setStatusMedia({url:URL.createObjectURL(file),type:file.type.startsWith("video/")?"video":"image",name:file.name});}}/>
         <form className="friend-form" onSubmit={e=>{e.preventDefault();if(statusText.trim()||statusMedia){setMyStatuses(items=>[{id:Date.now(),text:statusText.trim(),media:statusMedia,audience:statusAudience},...items]);setStatusText("");setStatusMedia(null);}}}>
