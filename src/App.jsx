@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, updateProfile } from "firebase/auth";
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
 import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
@@ -15,8 +15,7 @@ export default function App() {
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [authUser, setAuthUser] = useState(null);
   const [authBusy, setAuthBusy] = useState(false);
-  const confirmation = useRef(null);
-  const recaptcha = useRef(null);
+
   const [active, setActive] = useState(demoChats[0]);
   const [message, setMessage] = useState("");
   const [phone, setPhone] = useState("");
@@ -46,10 +45,8 @@ export default function App() {
   const [statusMedia,setStatusMedia] = useState(null);
   const [statusAudience,setStatusAudience] = useState("همهٔ دوستان");
   const [statusReplies,setStatusReplies] = useState({});
-  const [loginCountry,setLoginCountry] = useState("+93");
-  const [loginPhone,setLoginPhone] = useState("");
-  const [loginCode,setLoginCode] = useState("");
-  const [loginStep,setLoginStep] = useState(false);
+  const [loginEmail,setLoginEmail] = useState("");
+  const [loginPassword,setLoginPassword] = useState("");
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
   const statusPicker = useRef(null);
@@ -61,49 +58,43 @@ export default function App() {
     if (user) { setDisplayName(user.displayName || user.phoneNumber || "کاربر افغان چت"); setPage("chats"); }
   }), []);
 
-  async function loginWithGoogle() {
-    setAuthBusy(true);
-    try { await signInWithPopup(auth, googleProvider); setNotice(""); }
-    catch (error) { const messages = { "auth/network-request-failed": "اتصال به گوگل برقرار نشد. اینترنت گوشی را بررسی کن و اگر شبکه دسترسی به گوگل را محدود کرده، با اینترنت یا VPN پایدار دوباره تلاش کن.", "auth/popup-blocked": "پنجرهٔ ورود گوگل باز نشد. برنامه را در مرورگر اصلی باز کن و دوباره تلاش کن.", "auth/unauthorized-domain": "دامنهٔ برنامه در Firebase برای ورود گوگل مجاز نشده است؛ تنظیمات Firebase باید اصلاح شود.", "auth/operation-not-allowed": "ورود با گوگل در Firebase فعال نیست؛ باید از بخش Authentication فعال شود." }; setNotice(messages[error.code] || `ورود گوگل ناموفق شد: ${error.message}`); }
-    finally { setAuthBusy(false); }
-  }
-
-  async function requestPhoneCode() {
-    const digits = loginPhone.replace(/\\D/g, "");
-    if (!digits) { setNotice("شماره تلفن را وارد کن."); return; }
-    const fullPhone = `${loginCountry}${digits}`;
+  async function loginWithEmail() {
+    const email = loginEmail.trim();
+    if (!email || !loginPassword) { setNotice("ایمیل و رمز عبور افغان‌چت را وارد کن."); return; }
     setAuthBusy(true);
     try {
-      // Dispose of any previous widget before binding a new verifier to the same DOM element.
-      if (recaptcha.current) {
-        recaptcha.current.clear();
-        recaptcha.current = null;
-      }
-      const recaptchaContainer = document.getElementById("recaptcha-container");
-      if (!recaptchaContainer) throw new Error("بخش تأیید امنیتی پیدا نشد. صفحه را دوباره باز کن.");
-      recaptchaContainer.replaceChildren();
-      const verifier = new RecaptchaVerifier(auth, recaptchaContainer, { size: "invisible" });
-      recaptcha.current = verifier;
-      await verifier.render();
-      confirmation.current = await signInWithPhoneNumber(auth, fullPhone, verifier);
-      setLoginStep(true);
-      setNotice("کد تأیید به شماره‌ات پیامک شد.");
+      await signInWithEmailAndPassword(auth, email, loginPassword);
+      setNotice("");
     } catch (error) {
-      confirmation.current = null;
-      try { recaptcha.current?.clear(); } catch {}
-      recaptcha.current = null;
-      const recaptchaContainer = document.getElementById("recaptcha-container");
-      if (recaptchaContainer) recaptchaContainer.replaceChildren();
-      const authErrors = { "auth/network-request-failed": "اتصال به سرور تأیید شماره برقرار نشد. اینترنت گوشی را بررسی کن؛ اگر شبکه دسترسی به Firebase/Google را بسته، با اینترنت یا VPN پایدار دوباره امتحان کن.", "auth/invalid-phone-number": "شماره تلفن درست نیست؛ شماره را بدون صفر اول و با کشور درست وارد کن.", "auth/too-many-requests": "درخواست‌های زیادی فرستاده شده؛ کمی صبر کن و بعد دوباره تلاش کن.", "auth/operation-not-allowed": "ورود با شماره تلفن در Firebase فعال نیست؛ باید از بخش Authentication فعال شود.", "auth/unauthorized-domain": "دامنهٔ برنامه در Firebase مجاز نشده است." }; setNotice(authErrors[error.code] || `ارسال کد انجام نشد: ${error.message}`);
+      const errors = {
+        "auth/invalid-credential": "ایمیل یا رمز عبور درست نیست. اگر حساب نداری، اول حساب بساز.",
+        "auth/user-not-found": "این ایمیل حساب افغان‌چت ندارد؛ گزینهٔ ساخت حساب را بزن.",
+        "auth/wrong-password": "رمز عبور افغان‌چت نادرست است.",
+        "auth/invalid-email": "نشانی ایمیل درست نیست.",
+        "auth/too-many-requests": "تلاش‌های زیادی انجام شد؛ کمی بعد دوباره کوشش کن.",
+        "auth/network-request-failed": "اتصال اینترنت برقرار نیست؛ اینترنت را بررسی کن."
+      };
+      setNotice(errors[error.code] || "ورود انجام نشد. دوباره تلاش کن.");
     } finally { setAuthBusy(false); }
   }
 
-  async function verifyPhoneCode() {
-    if (!confirmation.current || !loginCode.trim()) { setNotice("کد پیامک‌شده را وارد کن."); return; }
+  async function createEmailAccount() {
+    const email = loginEmail.trim();
+    if (!email || !loginPassword) { setNotice("ایمیل و رمز عبور افغان‌چت را وارد کن."); return; }
+    if (loginPassword.length < 6) { setNotice("رمز عبور باید دست‌کم ۶ حرف یا عدد داشته باشد."); return; }
     setAuthBusy(true);
-    try { await confirmation.current.confirm(loginCode.trim()); setNotice(""); }
-    catch (error) { setNotice(`کد تأیید درست نیست: ${error.message}`); }
-    finally { setAuthBusy(false); }
+    try {
+      await createUserWithEmailAndPassword(auth, email, loginPassword);
+      setNotice("");
+    } catch (error) {
+      const errors = {
+        "auth/email-already-in-use": "برای این ایمیل قبلاً حساب ساخته شده؛ گزینهٔ ورود را بزن.",
+        "auth/invalid-email": "نشانی ایمیل درست نیست.",
+        "auth/weak-password": "رمز عبور ضعیف است؛ دست‌کم ۶ حرف یا عدد انتخاب کن.",
+        "auth/network-request-failed": "اتصال اینترنت برقرار نیست؛ اینترنت را بررسی کن."
+      };
+      setNotice(errors[error.code] || "ساخت حساب انجام نشد. دوباره تلاش کن.");
+    } finally { setAuthBusy(false); }
   }
 
   function openCall(contact, media) {
@@ -160,29 +151,16 @@ export default function App() {
           <div className="welcome-card">
             <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
             <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
-            <h1>خوش آمدید به افغان چت</h1>
-            <p className="welcome-intro">برای ورود، یکی از روش‌های تأیید هویت را انتخاب کنید.</p>
-            <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}>
-              <span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ورود با حساب گوگل"}</span>
-            </button>
-            <div className="welcome-divider"><span>یا</span></div>
-            <label className="login-label">کشور و پیش‌شماره</label>
-            <select value={loginCountry} onChange={e=>setLoginCountry(e.target.value)} aria-label="کشور">
-              <option value="+93">افغانستان ‎+93</option>
-              <option value="+98">ایران ‎+98</option>
-            </select>
-            <label className="login-label" htmlFor="login-phone">شماره تلفن</label>
-            <input id="login-phone" dir="ltr" value={loginPhone} onChange={e=>setLoginPhone(e.target.value)} placeholder="شماره تلفن خود را وارد کنید" />
-            {loginStep && <>
-              <label className="login-label" htmlFor="login-code">کد تأیید پیامک</label>
-              <input id="login-code" dir="ltr" inputMode="numeric" autoComplete="one-time-code" value={loginCode} onChange={e=>setLoginCode(e.target.value)} placeholder="کد شش‌رقمی" />
-            </>}
-            <div id="recaptcha-container"></div>
-            <button className="phone-signin" type="button" onClick={loginStep ? verifyPhoneCode : requestPhoneCode} disabled={authBusy}>
-              {authBusy ? "لطفاً صبر کنید..." : loginStep ? "تأیید کد و ورود" : "دریافت کد ورود"}
-            </button>
+            <h1>ورود به افغان چت</h1>
+            <p className="welcome-intro">ایمیل و رمز عبور حساب افغان‌چت خود را وارد کن.</p>
+            <label className="login-label" htmlFor="login-email">ایمیل (جیمیل)</label>
+            <input id="login-email" type="email" dir="ltr" autoComplete="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} placeholder="name@gmail.com" />
+            <label className="login-label" htmlFor="login-password">رمز عبور افغان‌چت</label>
+            <input id="login-password" type="password" dir="ltr" autoComplete="current-password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} placeholder="رمز عبور خود را وارد کن" />
+            <button className="phone-signin" type="button" onClick={loginWithEmail} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ورود"}</button>
+            <button className="google-signin" type="button" onClick={createEmailAccount} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : "ساخت حساب جدید"}</button>
             {notice && <p className="notice" role="alert">{notice}</p>}
-            <p className="security-note">بدون تأیید حساب گوگل یا کد پیامکی، ورود به افغان‌چت ممکن نیست. رمز جیمیل را فقط در صفحهٔ رسمی گوگل وارد کنید؛ افغان‌چت آن را دریافت نمی‌کند.</p>
+            <p className="security-note">این رمز، رمز جداگانهٔ افغان‌چت است؛ رمز اصلی جیمیل خود را اینجا وارد نکن.</p>
             <small>Afghan Chat</small>
           </div>
         </section>
