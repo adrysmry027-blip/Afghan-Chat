@@ -54,6 +54,7 @@ export default function App() {
   const [emailMode,setEmailMode] = useState("signin");
   const [loggedIn,setLoggedIn] = useState(false);
   const [profileImage,setProfileImage] = useState("");
+  const [profileLoading,setProfileLoading] = useState(false);
   const statusPicker = useRef(null);
   const avatarPicker = useRef(null);
 
@@ -64,7 +65,8 @@ export default function App() {
       setLoggedIn(Boolean(user));
       if (user) {
         setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "کاربر افغان چت");
-        setPage("chats");
+      } else {
+        setPage("welcome");
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -73,23 +75,29 @@ export default function App() {
       setLoggedIn(Boolean(user));
       if (user) {
         setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "کاربر افغان چت");
-        setPage("chats");
+      } else {
+        setPage("welcome");
       }
     });
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!authUser?.id) { setUsername(""); return; }
+    if (!authUser?.id) { setUsername(""); setProfileLoading(false); return; }
+    let cancelled = false;
+    setProfileLoading(true);
     supabase.from("profiles").select("username,display_name,about,avatar_url")
-      .eq("id", authUser.id).maybeSingle().then(({ data }) => {
-        if (data) {
-          setUsername(data.username || "");
-          setDisplayName(data.display_name || authUser.email?.split("@")[0] || "کاربر افغان چت");
-          setAbout(data.about || "");
-          setProfileImage(data.avatar_url || "");
-        }
+      .eq("id", authUser.id).maybeSingle().then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) setNotice("بارگذاری پروفایل انجام نشد: " + error.message);
+        setUsername(data?.username || "");
+        setDisplayName(data?.display_name || authUser.user_metadata?.display_name || authUser.email?.split("@")[0] || "");
+        setAbout(data?.about || "خوش آمدی");
+        setProfileImage(data?.avatar_url || "");
+        setPage(data?.display_name?.trim() && data?.avatar_url ? "chats" : "onboarding");
+        setProfileLoading(false);
       });
+    return () => { cancelled = true; };
   }, [authUser?.id]);
 
   useEffect(() => {
@@ -181,6 +189,7 @@ export default function App() {
     if (!authUser?.id) return;
     const cleanName = displayName.trim();
     if (!cleanName) { setNotice("نام نمایشی را وارد کن."); return; }
+    if (!profileImage) { setNotice("لطفاً اول عکس پروفایل خود را انتخاب کن."); return; }
     setAuthBusy(true);
     setNotice("");
     const { error } = await supabase.from("profiles").upsert({
@@ -190,7 +199,10 @@ export default function App() {
       updated_at: new Date().toISOString()
     });
     if (error) setNotice("ذخیره پروفایل انجام نشد: " + error.message);
-    else setNotice("پروفایل با موفقیت ذخیره شد.");
+    else {
+      setNotice("");
+      setPage("chats");
+    }
     setAuthBusy(false);
   }
 
@@ -405,6 +417,37 @@ export default function App() {
             {notice && <p className="notice" role="alert">{notice}</p>}
             <p className="security-note">بدون تأیید کُد پیامک یا تأیید حساب گوگل، ورود انجام نمی‌شود. ورود آزمایشی با شماره‌های ثابت فقط پس از ثبت همان شماره‌ها و کُدها در تنظیمات امن Supabase ممکن است.</p>
             <small>Afghan Chat</small>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (profileLoading) {
+    return <main className="app-shell"><section className="welcome-screen" dir="rtl"><div className="welcome-card"><div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="افغان چت" /></div><h1>در حال آماده‌سازی حساب...</h1><p className="welcome-intro">لطفاً چند لحظه صبر کن.</p></div></section></main>;
+  }
+
+  if (page === "onboarding" && authUser) {
+    return (
+      <main className="app-shell">
+        <section className="welcome-screen" dir="rtl">
+          <div className="welcome-card onboarding-card">
+            <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
+            <p className="welcome-kicker">یک قدم تا شروع گفتگو</p>
+            <h1>پروفایل خود را بساز</h1>
+            <p className="welcome-intro">نام و عکس خود را انتخاب کن تا دوستانت تو را بشناسند.</p>
+            <button className="onboarding-avatar" type="button" onClick={() => avatarPicker.current?.click()} aria-label="انتخاب عکس پروفایل">
+              {profileImage ? <img src={profileImage} alt="عکس پروفایل" /> : <span>＋</span>}
+            </button>
+            <input ref={avatarPicker} className="hidden-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadAvatar} />
+            <button className="secondary-action onboarding-photo-button" type="button" onClick={() => avatarPicker.current?.click()}>انتخاب عکس پروفایل</button>
+            <label className="login-label" htmlFor="onboarding-name">نام نمایشی</label>
+            <input id="onboarding-name" type="text" maxLength={40} value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="نام خود را بنویس" />
+            <label className="login-label" htmlFor="onboarding-about">دربارهٔ من (اختیاری)</label>
+            <input id="onboarding-about" type="text" maxLength={80} value={about} onChange={e => setAbout(e.target.value)} placeholder="خوش آمدی" />
+            <button className="phone-signin" type="button" onClick={saveProfile} disabled={authBusy || !profileImage}>{authBusy ? "در حال ذخیره..." : "ذخیره و ورود به افغان چت"}</button>
+            {notice && <p className="notice" role="alert">{notice}</p>}
+            <p className="security-note">رمز عبور تو برای دیگر کاربران نمایش داده نمی‌شود.</p>
           </div>
         </section>
       </main>
