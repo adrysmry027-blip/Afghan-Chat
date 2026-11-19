@@ -11,6 +11,7 @@ const demoChats = [
 
 export default function App() {
   const [page, setPage] = useState("welcome");
+  const [guestMode, setGuestMode] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [authUser, setAuthUser] = useState(null);
   const [authBusy, setAuthBusy] = useState(false);
@@ -412,8 +413,8 @@ export default function App() {
   }
 
 
-  // Never render chats, settings, or navigation until Supabase confirms a signed-in user.
-  if (!authUser) {
+  // Guest preview is local-only and never reads or writes private Supabase data.
+  if (!authUser && !guestMode) {
     return (
       <main className="app-shell">
         <section className="welcome-screen" dir="rtl">
@@ -455,7 +456,8 @@ export default function App() {
               <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>
             </>}
             {notice && <p className="notice" role="alert">{notice}</p>}
-            <p className="security-note">بدون تأیید کُد پیامک یا تأیید حساب گوگل، ورود انجام نمی‌شود. ورود آزمایشی با شماره‌های ثابت فقط پس از ثبت همان شماره‌ها و کُدها در تنظیمات امن Supabase ممکن است.</p>
+            <button className="secondary-action" type="button" onClick={() => { setGuestMode(true); setPage("chats"); setDisplayName("مهمان افغان‌چت"); setConversations(demoChats); setActive(demoChats[0]); setMessages([{id:"demo-1",from:"them",type:"text",text:"به افغان‌چت خوش آمدی! این یک گفتگوی نمایشی است.",createdAt:Date.now()},{id:"demo-2",from:"me",type:"text",text:"سلام، این نسخه آزمایشی است.",createdAt:Date.now()}]); setNotice(""); }}>ورود مهمان و دیدن برنامه</button>
+            <p className="security-note">ورود مهمان فقط برای دیدن محیط برنامه است؛ پیام‌ها و حساب‌های واقعی باز نمی‌شوند.</p>
             <small>Afghan Chat</small>
           </div>
         </section>
