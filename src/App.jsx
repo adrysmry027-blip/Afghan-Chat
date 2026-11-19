@@ -133,7 +133,10 @@ export default function App() {
       setActive((current) => items.find((item) => item.id === current?.id) || items[0] || { id: null, name: "هنوز گفتگویی نداری", photo: "" });
     }
     loadConversations();
-    return () => { cancelled = true; };
+    const membershipChannel = supabase.channel("memberships-" + authUser.id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members", filter: "user_id=eq." + authUser.id }, loadConversations)
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(membershipChannel); };
   }, [authUser?.id]);
 
   useEffect(() => {
@@ -418,50 +421,59 @@ export default function App() {
   if (!authUser && !guestMode) {
     return (
       <main className="app-shell">
-        <section className="welcome-screen" dir="rtl">
-          <div className="welcome-card">
-            <div className="welcome-logo"><img src="/afghan-chat-logo.svg" alt="لوگوی افغان چت" /></div>
-            <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
-            <h1>ورود به افغان چت</h1>
-            <p className="welcome-intro">با جیمیل و رمز مخصوص افغان چت وارد شو.</p>
-            <div className="welcome-divider"><span>{emailMode === "signup" ? "ساخت حساب تازه" : "ورود با جیمیل"}</span></div>
+        {page === "welcome" ? <section className="wa-auth-screen" dir="rtl">
+          <button className="wa-auth-menu" type="button" aria-label="منوی بیشتر">⋮</button>
+          <div className="wa-auth-center">
+            <div className="wa-auth-illustration"><img src="/afghan-chat-logo.svg" alt="نشان افغان چت"/></div>
+            <h1>به افغان چت خوش آمدید</h1>
+            <p>ارتباط آسان، امن و قابل اعتماد برای دوستان و خانواده</p>
+            <p>با افغان‌ها در هر جا در تماس بمانید</p>
+          </div>
+          <div className="wa-auth-footer">
+            <p>با ادامه دادن، شما با شرایط استفاده و حریم خصوصی افغان چت موافقت می‌کنید.</p>
+            <button type="button" onClick={()=>setPage("phone-login")}>موافقت و ادامه</button>
+            <button className="wa-auth-google" type="button" onClick={loginWithGoogle} disabled={authBusy}>{authBusy ? "در حال اتصال..." : "ورود با گوگل"}</button>
+            <button className="wa-auth-google" type="button" onClick={()=>{setEmailStep("email");setPage("email-login");}}>ورود با جیمیل و رمز افغان چت</button>
+          </div>
+        </section> : page === "phone-login" ? <section className="wa-auth-screen wa-phone-screen" dir="rtl">
+          <button className="wa-auth-menu" type="button" aria-label="منوی بیشتر">⋮</button>
+          <div className="wa-phone-form">
+            <button className="back-link" type="button" onClick={()=>{setPage("welcome");setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>← بازگشت</button>
+            <h1>شماره تلفنتان را وارد کنید</h1>
+            <p>افغان چت شمارهٔ تلفن شما را برای تأیید حساب استفاده می‌کند.</p>
+            <a className="wa-learn-more" href="#phone-help" onClick={e=>{e.preventDefault();setNotice("شمارهٔ تلفن فقط برای تأیید حساب استفاده می‌شود.");}}>بیشتر بدانید</a>
+            <select aria-label="کشور" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>
+              <option value="+93">افغانستان</option><option value="+98">ایران</option>
+              <option value="+992">تاجیکستان</option><option value="+998">ازبکستان</option><option value="+90">ترکیه</option>
+            </select>
+            {!phoneOtpSent ? <div className="wa-phone-number"><span>{loginCountry}</span><input aria-label="شماره تلفن" type="tel" inputMode="numeric" autoComplete="tel-national" dir="ltr" value={phoneNumber} onChange={e=>{setPhoneNumber(e.target.value.replace(/[^0-9]/g,""));setNotice("");}} placeholder="شماره تلفن"/></div> : <>
+              <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
+              <input id="login-otp" className="wa-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک"/>
+            </>}
+            <button className="wa-next" type="button" disabled={authBusy || (!phoneOtpSent && phoneNumber.replace(/\D/g,"").length<6) || (phoneOtpSent && phoneOtp.length!==6)} onClick={phoneOtpSent?verifyPhoneCode:sendPhoneCode}>{authBusy?(phoneOtpSent?"در حال بررسی...":"در حال ارسال..."):phoneOtpSent?"تأیید و ادامه":"بعدی"}</button>
+            {phoneOtpSent && <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>}
+            {notice && <p className="notice" role="alert">{notice}</p>}
+          </div>
+        </section> : <section className="wa-auth-screen wa-phone-screen" dir="rtl">
+          <div className="wa-phone-form">
+            <button className="back-link" type="button" onClick={()=>{setPage("welcome");setEmailStep("email");setEmailPassword("");setNotice("");}}>← بازگشت</button>
+            <h1>ورود با جیمیل</h1>
+            <p>جیمیل خود و رمز مخصوص افغان چت را وارد کن.</p>
             {emailStep === "email" ? <>
-              <label className="login-label" htmlFor="login-email">اول جیمیل خود را وارد کن</label>
-              <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com" />
-              <button className="phone-signin" type="button" onClick={continueWithEmail}>ادامه</button>
+              <label className="login-label" htmlFor="login-email">نشانی جیمیل</label>
+              <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com"/>
+              <button className="wa-next" type="button" onClick={continueWithEmail}>ادامه</button>
             </> : <>
               <p className="email-confirmed" dir="ltr">{emailAddress}</p>
-              <label className="login-label" htmlFor="login-password">حالا رمز عبور افغان چت را وارد کن</label>
-              <input id="login-password" type="password" dir="ltr" autoComplete={emailMode === "signup" ? "new-password" : "current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد" />
-              <button className="phone-signin" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy ? "لطفاً صبر کن..." : emailMode === "signup" ? "ساخت حساب" : "ورود به افغان چت"}</button>
+              <label className="login-label" htmlFor="login-password">رمز عبور افغان چت</label>
+              <input id="login-password" type="password" dir="ltr" autoComplete={emailMode==="signup"?"new-password":"current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد"/>
+              <button className="wa-next" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy?"لطفاً صبر کن...":emailMode==="signup"?"ساخت حساب":"ورود به افغان چت"}</button>
               <button className="back-link" type="button" onClick={()=>{setEmailStep("email");setEmailPassword("");setNotice("");}}>تغییر جیمیل</button>
             </>}
-            <button className="back-link" type="button" onClick={()=>{setEmailMode(emailMode === "signup" ? "signin" : "signup");setEmailStep("email");setEmailPassword("");setNotice("");}}>{emailMode === "signup" ? "از قبل حساب داری؟ وارد شو" : "حساب نداری؟ حساب تازه بساز"}</button>
-            <div className="welcome-divider"><span>یا ورود با شماره تلفن</span></div>
-            <div className="settings-group country-preview">
-              <label className="login-label" htmlFor="login-country">کشور و پیش‌شماره</label>
-              <select id="login-country" value={loginCountry} onChange={e=>{setLoginCountry(e.target.value);setPhoneOtpSent(false);setPhoneOtp("");}}>
-                <option value="+93">🇦🇫 افغانستان +93</option><option value="+98">🇮🇷 ایران +98</option>
-                <option value="+92">پاکستان +92</option><option value="+992">تاجیکستان +992</option>
-                <option value="+998">ازبکستان +998</option><option value="+993">ترکمنستان +993</option>
-                <option value="+90">ترکیه +90</option><option value="+971">امارات +971</option>
-                <option value="+966">عربستان سعودی +966</option><option value="+91">هند +91</option>
-              </select>
-            </div>
-            <label className="login-label" htmlFor="login-phone">شماره تلفن</label>
-            <input id="login-phone" type="tel" dir="ltr" autoComplete="tel-national" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value)} placeholder="شماره خود را وارد کن" disabled={phoneOtpSent} />
-            {!phoneOtpSent ? <button className="phone-signin" type="button" onClick={sendPhoneCode} disabled={authBusy}>{authBusy ? "در حال ارسال..." : "ارسال کُد تأیید"}</button> : <>
-              <label className="login-label" htmlFor="login-otp">کُد شش‌رقمی پیامک</label>
-              <input id="login-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/[^0-9]/g,""))} placeholder="کُد پیامک" />
-              <button className="phone-signin" type="button" onClick={verifyPhoneCode} disabled={authBusy}>{authBusy ? "در حال بررسی..." : "تأیید کُد و ورود"}</button>
-              <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>
-            </>}
+            <button className="wa-auth-google" type="button" onClick={()=>{setEmailMode(emailMode==="signup"?"signin":"signup");setEmailStep("email");setEmailPassword("");setNotice("");}}>{emailMode==="signup"?"از قبل حساب داری؟ وارد شو":"حساب نداری؟ حساب تازه بساز"}</button>
             {notice && <p className="notice" role="alert">{notice}</p>}
-            <button className="secondary-action" type="button" onClick={() => { setGuestMode(true); setPage("chats"); setDisplayName("مهمان افغان‌چت"); setConversations(demoChats); setActive(demoChats[0]); setMessages([{id:"demo-1",from:"them",type:"text",text:"به افغان‌چت خوش آمدی! این یک گفتگوی نمایشی است.",createdAt:Date.now()},{id:"demo-2",from:"me",type:"text",text:"سلام، این نسخه آزمایشی است.",createdAt:Date.now()}]); setNotice(""); }}>ورود مهمان و دیدن برنامه</button>
-            <p className="security-note">ورود مهمان فقط برای دیدن محیط برنامه است؛ پیام‌ها و حساب‌های واقعی باز نمی‌شوند.</p>
-            <small>Afghan Chat</small>
           </div>
-        </section>
+        </section>}
       </main>
     );
   }
