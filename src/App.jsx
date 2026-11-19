@@ -1,4 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, updateProfile } from "firebase/auth";
+import { auth, googleProvider } from "./firebase";
 import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
 
@@ -11,8 +13,10 @@ const demoChats = [
 export default function App() {
   const [page, setPage] = useState("welcome");
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [googleEmail, setGoogleEmail] = useState("");
-  const [demoGooglePassword, setDemoGooglePassword] = useState("");
+  const [authUser, setAuthUser] = useState(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const confirmation = useRef(null);
+  const recaptcha = useRef(null);
   const [active, setActive] = useState(demoChats[0]);
   const [message, setMessage] = useState("");
   const [phone, setPhone] = useState("");
@@ -51,7 +55,7 @@ export default function App() {
   const statusPicker = useRef(null);
   const avatarPicker = useRef(null);
 
-  function openCall(contact, media) {
+  useEffect(() => onAuthStateChanged(auth, (user) => {\n    setAuthUser(user);\n    setLoggedIn(Boolean(user));\n    if (user) { setDisplayName(user.displayName || user.phoneNumber || "کاربر افغان چت"); setPage("chats"); }\n  }), []);\n\n  async function loginWithGoogle() {\n    setAuthBusy(true);\n    try { await signInWithPopup(auth, googleProvider); setNotice(""); }\n    catch (error) { setNotice(error.code === "auth/popup-blocked" ? "مرورگر پنجرهٔ ورود گوگل را بسته است؛ در مرورگر اصلی دوباره تلاش کن." : `ورود گوگل ناموفق شد: ${error.message}`); }\n    finally { setAuthBusy(false); }\n  }\n\n  async function requestPhoneCode() {\n    const digits = loginPhone.replace(/\\D/g, "");\n    if (!digits) { setNotice("شماره تلفن را وارد کن."); return; }\n    const fullPhone = `${loginCountry}${digits}`;\n    setAuthBusy(true);\n    try {\n      if (!recaptcha.current) recaptcha.current = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });\n      confirmation.current = await signInWithPhoneNumber(auth, fullPhone, recaptcha.current);\n      setLoginStep(true); setNotice("کد تأیید به شماره‌ات پیامک شد.");\n    } catch (error) { setNotice(`ارسال کد انجام نشد: ${error.message}`); recaptcha.current?.clear(); recaptcha.current = null; }\n    finally { setAuthBusy(false); }\n  }\n\n  async function verifyPhoneCode() {\n    if (!confirmation.current || !loginCode.trim()) { setNotice("کد پیامک‌شده را وارد کن."); return; }\n    setAuthBusy(true);\n    try { await confirmation.current.confirm(loginCode.trim()); setNotice(""); }\n    catch (error) { setNotice(`کد تأیید درست نیست: ${error.message}`); }\n    finally { setAuthBusy(false); }\n  }\n\n  function openCall(contact, media) {
     setCallSession(createCallSession({ contact, media }));
   }
 
@@ -105,7 +109,7 @@ export default function App() {
           <p className="welcome-kicker">ارتباط نزدیک‌تر، با افغان‌چت</p>
           <h1>خوش آمدید به افغان چت</h1>
           <p className="welcome-intro">برای ادامه، یکی از روش‌های ورود را انتخاب کنید.</p>
-          <button className="google-signin" type="button" onClick={()=>setPage("google-login")}><span className="google-g">G</span><span>ورود با گوگل</span></button>
+          <button className="google-signin" type="button" onClick={loginWithGoogle} disabled={authBusy}><span className="google-g">G</span><span>{authBusy ? "در حال اتصال..." : "ورود با گوگل"}</span></button>
           <button className="phone-signin" type="button" onClick={()=>setPage("account")}><span>☎</span><span>ورود با شماره تلفن</span></button>
           <div className="welcome-divider"><span>ورود آسان و امن</span></div>
           <p className="welcome-foot">با ورود به افغان‌چت، می‌توانی با دوستان و خانواده‌ات در ارتباط باشی.</p>
@@ -201,7 +205,7 @@ export default function App() {
 
         <p className="demo-warning">تنظیمات حساب و حریم خصوصی فعلاً روی سرور ذخیره نمی‌شوند.</p></section> : null}
       {page === "groups" && <section className="content-page"><h2>گروه‌ها</h2><p>گروه تازه بساز و اعضا را اضافه کن.</p><form className="friend-form" onSubmit={e=>{e.preventDefault();if(groupName.trim()){setGroups(gs=>[{id:Date.now(),name:groupName.trim(),members:["من",...(groupMember.trim()?[groupMember.trim()]:[])]},...gs]);setGroupName("");setGroupMember("");}}}><label>نام گروه</label><input value={groupName} onChange={e=>setGroupName(e.target.value)} placeholder="مثلاً گروه دوستان"/><label>نام یک عضو (اختیاری)</label><input value={groupMember} onChange={e=>setGroupMember(e.target.value)} placeholder="نام دوست"/><button className="send" type="submit">ساخت گروه</button></form><div className="status-list"><h3>گروه‌های من</h3>{groups.map(g=><div className="status-card" key={g.id}><strong>{g.name}</strong><p>{g.members.length} عضو: {g.members.join("، ")}</p><button className="text-action" onClick={()=>setGroups(gs=>gs.filter(x=>x.id!==g.id))}>حذف گروه آزمایشی</button></div>)}</div><p className="demo-warning">ساخت و حذف گروه فعلاً فقط در همین گوشی انجام می‌شود.</p></section>}
-      {page === "account" && <section className="content-page"><h2>ورود به افغان چت</h2><p>با شمارهٔ افغانستان یا ایران وارد شو. ورود گوگل نیز در نسخهٔ اصلی وصل می‌شود.</p><div className="settings-group"><h3>ورود با شماره تلفن</h3><label>کشور<select value={loginCountry} onChange={e=>setLoginCountry(e.target.value)}><option value="+93">افغانستان +93</option><option value="+98">ایران +98</option></select></label><label>شماره تلفن<input dir="ltr" value={loginPhone} onChange={e=>setLoginPhone(e.target.value)} placeholder="700000000"/></label>{loginStep&&<label>کد آزمایشی<input dir="ltr" value={loginCode} onChange={e=>setLoginCode(e.target.value)} placeholder="کد یک‌بارمصرف"/></label>}<button className="send" onClick={()=>{if(!loginPhone.trim()){setNotice("شماره تلفن را وارد کن.");return;}if(!loginStep){setLoginStep(true);setNotice("این فقط مرحلهٔ نمایشی است؛ پیامک واقعی فرستاده نشده. برای آزمایش هر کدی وارد کن.");}else if(loginCode.trim()){setLoggedIn(true);setDisplayName(displayName==="حساب من"?"کاربر افغان چت":displayName);setNotice("ورود آزمایشی انجام شد.");}}}>{loginStep?"تأیید کد آزمایشی":"دریافت کد ورود"}</button><button className="secondary-action" onClick={()=>{setLoggedIn(true);setNotice("ورود گوگل در این نسخه فقط نمایشی است؛ اتصال واقعی بعداً فعال می‌شود.");}}>ادامه با Google</button>{loggedIn&&<p className="login-success">ورود آزمایشی فعال است.</p>}{notice&&<p className="notice">{notice}</p>}</div><p className="demo-warning">این ورود واقعی نیست و هیچ پیامک یا حساب گوگل تأیید نمی‌شود؛ اتصال امن بعداً با سرور انجام خواهد شد.</p></section>}
+      {page === "account" && <section className="content-page"><h2>ورود به افغان چت</h2><p>با شمارهٔ افغانستان یا ایران، یا حساب گوگل وارد شو.</p><div className="settings-group"><h3>ورود با شماره تلفن</h3><label>کشور<select value={loginCountry} onChange={e=>setLoginCountry(e.target.value)}><option value="+93">افغانستان +93</option><option value="+98">ایران +98</option></select></label><label>شماره تلفن<input dir="ltr" value={loginPhone} onChange={e=>setLoginPhone(e.target.value)} placeholder="700000000"/></label>{loginStep&&<label>کد آزمایشی<input dir="ltr" value={loginCode} onChange={e=>setLoginCode(e.target.value)} placeholder="کد یک‌بارمصرف"/></label>}<div id="recaptcha-container"></div><button className="send" disabled={authBusy} onClick={loginStep?verifyPhoneCode:requestPhoneCode}>{authBusy?"لطفاً صبر کن...":loginStep?"تأیید کد پیامک‌شده":"دریافت کد واقعی"}</button><button className="secondary-action" type="button" onClick={loginWithGoogle}>ادامه با Google</button>{authUser&&<p className="login-success">وارد شده‌ای: {authUser.phoneNumber || authUser.email}</p>}{notice&&<p className="notice">{notice}</p>}</div><p className="setting-hint">برای پیامک، شماره باید با کود کشور درست باشد و دامنهٔ برنامه در تنظیمات Firebase مجاز باشد. پیامک ممکن است سهمیهٔ محدود داشته باشد.</p></section>}
       {page === "more" && <section className="content-page more-page"><h2>بیشتر</h2><p>بخش‌های دیگر افغان چت</p><div className="more-menu">
         <button onClick={()=>setPage("friends")}><span>👥</span><strong>دوستان</strong><small>یافتن و افزودن دوست</small><b>‹</b></button>
         <button onClick={()=>setPage("groups")}><span>👨‍👩‍👧‍👦</span><strong>گروه‌ها</strong><small>ساخت و مدیریت گروه‌ها</small><b>‹</b></button>
