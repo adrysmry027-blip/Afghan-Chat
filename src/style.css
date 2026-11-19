@@ -688,3 +688,88 @@ body{background:linear-gradient(135deg,#eaf2fc 0%,#f8fbff 55%,#e7f0fc 100%)}
 .dark-theme .conversation-head{background:linear-gradient(105deg,#073b7a,#062d5c)}
 .dark-theme .mobile-bottom-nav{background:#172536;border-color:#30465f}
 .dark-theme .mobile-bottom-nav button.active{color:#7eb5ff}
+
+
+/* Reference-match polish: blue app bar, white inbox, clean WhatsApp-like rows. */
+:root{
+  --ac-blue:#0757c9;
+  --ac-blue-dark:#06439d;
+  --ac-blue-soft:#eaf2ff;
+}
+body{background:#edf3fb;color:#172b45}
+.app-shell{
+  background:#fff;border:1px solid #dce7f6;border-radius:22px;
+  box-shadow:0 20px 60px rgba(16,65,130,.14)
+}
+.sidebar{background:#fff!important;color:#172b45;border-left:1px solid #e7edf5}
+.brand{
+  background:linear-gradient(110deg,#0868df,#0646a5)!important;
+  color:#fff;min-height:72px;padding:12px 16px;margin:0
+}
+.brand h1,.brand p{color:#fff}
+.brand-mark{background:#ffffff22;border:1px solid #ffffff35}
+.profile{background:#f4f7fc;color:#203b5b;border:1px solid #e6edf7}
+.side-actions{background:#fff;border-bottom:1px solid #e8eef7}
+.side-action{color:#53677f;background:transparent}
+.side-action.active{background:#edf4ff;color:#0757c9;border-bottom:3px solid #0757c9}
+.section-title{color:#243d5b}
+.chat-list{background:#fff;gap:0}
+.chat-item{background:#fff;color:#172b45;border:0;border-bottom:1px solid #edf1f6;border-radius:0}
+.chat-item.selected,.chat-item:hover{background:#f2f7ff}
+.chat-copy strong{color:#172b45}
+.chat-copy span{color:#71839a}
+.chat-meta{color:#70839b}
+.chat-meta i{background:#20bd55;color:#fff}
+.conversation{background:#f4f8ff}
+.conversation-head{background:linear-gradient(105deg,#0868df,#0646a5);color:#fff}
+.conversation-head strong,.conversation-head span{color:#fff}
+.conversation-head .avatar{background:#fff;color:#0757c9}
+.messages{background-color:#f5f8fe;background-image:radial-gradient(#dce8fa 1px,transparent 1px)}
+.date-chip{background:#e7f0ff;color:#456b9b}
+.bubble{background:#fff;color:#20344e;border:1px solid #e6edf7}
+.mine .bubble{background:#dcecff;border-color:#cbdfff}
+.composer{background:#fff;border-top:1px solid #e7edf6}
+.composer input{background:#f7f9fd;border:1px solid #e2eaf5}
+.send,.phone-signin,.call-close{background:linear-gradient(135deg,#0875e1,#064b9b);color:#fff}
+.content-page{background:#f7f9fd;color:#20344e}
+.content-page h2,.settings-group h3{color:#0757b8}
+.mobile-bottom-nav{background:#fff;border-top:1px solid #e4edf8;box-shadow:0 -5px 20px rgba(7,59,122,.09)}
+.mobile-bottom-nav button{color:#71839a}
+.mobile-bottom-nav button.active{color:#0757c9;background:#edf4ff}
+.welcome-screen{background:linear-gradient(150deg,#0875e1 0%,#0757b8 52%,#073b7a 100%)}
+.welcome-card{border:1px solid #dce8f7;border-radius:24px}
+.welcome-card h1{color:#06479f}
+.welcome-kicker{color:#2477ce}
+.google-signin{border-radius:14px}
+.phone-signin{border-radius:14px}
+@media(max-width:680px){
+  .app-shell{border:0;border-radius:0;background:#fff}
+  .sidebar{background:#fff!important;padding:0 0 76px!important;box-shadow:none}
+  .brand{display:flex!important;min-height:66px;padding:10px 15px}
+  .brand-mark{width:44px;height:44px;border-radius:14px}
+  .profile{display:none!important}
+  .side-actions{
+    display:flex!important;position:relative;inset:auto;height:auto;
+    overflow-x:auto;scrollbar-width:none;padding:0 8px;margin:0;
+    background:#fff;border-bottom:1px solid #e8eef7;box-shadow:none;gap:0
+  }
+  .side-actions::-webkit-scrollbar{display:none}
+  .side-action{flex:1 0 auto;min-width:88px;height:54px;padding:12px 8px;
+    font-size:12px;border:0;border-radius:0;background:#fff;white-space:nowrap}
+  .side-action.active{background:#fff;color:#0757c9;border-bottom:3px solid #0757c9}
+  .section-title{display:flex!important;margin:14px 15px 7px;font-size:17px}
+  .chat-list{display:flex!important;flex-direction:column;overflow-y:auto;overflow-x:hidden;gap:0;padding:0}
+  .chat-item{width:100%;min-width:0;min-height:84px;flex:0 0 auto;padding:11px 15px;
+    display:flex;border:0;border-bottom:1px solid #edf1f6;border-radius:0;background:#fff}
+  .chat-item .avatar{width:54px;height:54px;flex:0 0 54px}
+  .chat-copy strong{font-size:15px}
+  .chat-copy span{font-size:12px}
+  .chat-meta{font-size:10px}
+  .sidebar-note{display:none}
+  .mobile-bottom-nav{height:70px;background:#fff}
+  .conversation-head{background:linear-gradient(105deg,#0868df,#0646a5)}
+  .conversation{background:#f5f8fe}
+  .messages{background-color:#f5f8fe}
+  .mine .bubble{background:#dcecff}
+}
+.dark-theme .sidebar{background:#fff!important}
