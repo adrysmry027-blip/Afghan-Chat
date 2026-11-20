@@ -112,7 +112,14 @@ export default function App() {
         setPage("welcome");
       }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setEmailAddress(session?.user?.email || "");
+        setEmailPassword("");
+        setEmailStep("new-password");
+        setPage("email-login");
+        setNotice("رمز تازهٔ افغان چت را تعیین کن.");
+      }
       const user = session?.user ?? null;
       setAuthUser(user);
       setLoggedIn(Boolean(user));
@@ -310,6 +317,47 @@ export default function App() {
       }
     } catch (error) {
       setNotice((emailMode === "signup" ? "ساخت حساب انجام نشد: " : "ورود انجام نشد: ") + error.message);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function sendPasswordReset() {
+    const email = emailAddress.trim().toLowerCase();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      setNotice("اول نشانی جیمیل خود را درست وارد کن.");
+      return;
+    }
+    setAuthBusy(true);
+    setNotice("");
+    try {
+      const redirectTo = Capacitor.isNativePlatform() ? "afghanchat://auth/callback" : window.location.origin + "/";
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+      setNotice("اگر این جیمیل حساب داشته باشد، پیوند بازیابی رمز برایش فرستاده می‌شود. ایمیلت را بررسی کن.");
+    } catch (error) {
+      setNotice("فرستادن پیوند بازیابی انجام نشد: " + (error?.message || "خطای ناشناخته"));
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function saveNewPassword() {
+    if (emailPassword.length < 8) {
+      setNotice("رمز تازه باید دست‌کم ۸ حرف یا عدد داشته باشد.");
+      return;
+    }
+    setAuthBusy(true);
+    setNotice("");
+    try {
+      const { error } = await supabase.auth.updateUser({ password: emailPassword });
+      if (error) throw error;
+      setEmailStep("password");
+      setEmailMode("signin");
+      setEmailPassword("");
+      setNotice("رمز تازه ثبت شد. اکنون با همان جیمیل و رمز وارد شو.");
+    } catch (error) {
+      setNotice("تغییر رمز انجام نشد: " + (error?.message || "خطای ناشناخته"));
     } finally {
       setAuthBusy(false);
     }
@@ -617,11 +665,17 @@ export default function App() {
               <button className="wa-next" type="button" onClick={verifyEmailCode} disabled={authBusy || emailOtp.length!==8}>{authBusy?"در حال بررسی...":"تأیید کُد و ورود"}</button>
               <button className="back-link" type="button" onClick={resendEmailCode} disabled={authBusy}>فرستادن دوبارهٔ کُد</button>
               <button className="back-link" type="button" onClick={()=>{setEmailStep("email");setEmailOtp("");setNotice("");}}>تغییر جیمیل</button>
+            </> : emailStep === "new-password" ? <>
+              <p className="email-confirmed" dir="ltr">{emailAddress}</p>
+              <label className="login-label" htmlFor="login-password">رمز تازهٔ افغان چت</label>
+              <input id="login-password" type="password" dir="ltr" autoComplete="new-password" minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد"/>
+              <button className="wa-next" type="button" onClick={saveNewPassword} disabled={authBusy}>{authBusy?"لطفاً صبر کن...":"ثبت رمز تازه"}</button>
             </> : <>
               <p className="email-confirmed" dir="ltr">{emailAddress}</p>
-              <label className="login-label" htmlFor="login-password">رمز عبور افغان چت</label>
-              <input id="login-password" type="password" dir="ltr" autoComplete={emailMode==="signup"?"new-password":"current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="حداقل ۸ حرف یا عدد"/>
-              <button className="wa-next" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy?"لطفاً صبر کن...":emailMode==="signup"?"ساخت حساب":"ورود به افغان چت"}</button>
+              <label className="login-label" htmlFor="login-password">رمز مخصوص افغان چت</label>
+              <input id="login-password" type="password" dir="ltr" autoComplete={emailMode==="signup"?"new-password":"current-password"} minLength={8} value={emailPassword} onChange={e=>setEmailPassword(e.target.value)} placeholder="رمز افغان چت، حداقل ۸ حرف یا عدد"/>
+              <button className="wa-next" type="button" onClick={submitEmailPassword} disabled={authBusy}>{authBusy?"لطفاً صبر کن...":emailMode==="signup"?"ساخت حساب تازه":"ورود به حساب من"}</button>
+              {emailMode==="signin" && <button className="back-link" type="button" onClick={sendPasswordReset} disabled={authBusy}>رمز را فراموش کرده‌ام</button>}
               <button className="back-link" type="button" onClick={()=>{setEmailStep("email");setEmailPassword("");setNotice("");}}>تغییر جیمیل</button>
             </>}
             <button className="wa-auth-google" type="button" onClick={()=>{setEmailMode(emailMode==="signup"?"signin":"signup");setEmailStep("email");setEmailPassword("");setNotice("");}}>{emailMode==="signup"?"از قبل حساب داری؟ وارد شو":"حساب نداری؟ حساب تازه بساز"}</button>
