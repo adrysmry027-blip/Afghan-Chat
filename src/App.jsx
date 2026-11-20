@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
-import { Browser } from "@capacitor/browser";
 import { supabase } from "./supabase";
 import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
@@ -87,10 +86,9 @@ export default function App() {
         }
         if (!disposed) setNotice("");
       } catch (error) {
-        if (!disposed) setNotice("ورود گوگل کامل نشد: " + (error?.message || "خطای ناشناخته"));
+        if (!disposed) setNotice("تکمیل ورود انجام نشد: " + (error?.message || "خطای ناشناخته"));
       } finally {
         if (!disposed) setAuthBusy(false);
-        try { await Browser.close(); } catch {}
       }
     };
 
@@ -430,38 +428,6 @@ export default function App() {
     } finally { setAuthBusy(false); }
   }
 
-  async function loginWithGoogle() {
-    if (authBusy) return;
-    setAuthBusy(true);
-    setNotice("");
-    try {
-      const isNative = Capacitor.isNativePlatform();
-      const redirectTo = isNative ? "afghanchat://auth/callback" : window.location.origin + "/";
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-          skipBrowserRedirect: isNative,
-          queryParams: { prompt: "select_account" }
-        }
-      });
-      if (error) throw error;
-      if (isNative) {
-        if (!data?.url) throw new Error("نشانی ورود گوگل از سرور دریافت نشد.");
-        await Browser.open({ url: data.url, presentationStyle: "popover" });
-        setAuthBusy(false);
-      }
-    } catch (error) {
-      const message = error?.message || "خطای ناشناخته";
-      if (/provider.*not.*enabled|unsupported_provider/i.test(message)) {
-        setNotice("ورود گوگل در Supabase هنوز فعال نشده است. Google Provider و Client ID/Secret باید در تنظیمات Supabase ثبت شود.");
-      } else {
-        setNotice("شروع ورود با گوگل انجام نشد: " + message);
-      }
-      setAuthBusy(false);
-    }
-  }
-
   function openCall(contact, media) {
     setCallSession(createCallSession({ contact, media }));
   }
@@ -622,9 +588,8 @@ export default function App() {
           </div>
           <div className="wa-auth-footer">
             <p>با ادامه دادن، شما با شرایط استفاده و حریم خصوصی افغان چت موافقت می‌کنید.</p>
-            <button type="button" onClick={()=>setPage("phone-login")}>موافقت و ادامه</button>
-            <button className="wa-auth-google" type="button" onClick={loginWithGoogle} disabled={authBusy}>{authBusy ? "در حال اتصال..." : "ورود با گوگل"}</button>
-            <button className="wa-auth-google" type="button" onClick={()=>{setEmailStep("email");setPage("email-login");}}>ورود با جیمیل و رمز افغان چت</button>
+            <button type="button" onClick={()=>setPage("phone-login")}>ورود با شمارهٔ تلفن</button>
+            <button className="wa-auth-google" type="button" onClick={()=>{setEmailStep("email");setEmailMode("signin");setPage("email-login");setNotice("");}}>ورود با جیمیل و رمز افغان‌چت</button>
           </div>
         </section> : page === "phone-login" ? <section className="wa-auth-screen wa-phone-screen" dir="rtl">
           <button className="wa-auth-menu" type="button" aria-label="منوی بیشتر">⋮</button>
@@ -646,7 +611,6 @@ export default function App() {
             </>}
             <button className="wa-next" type="button" disabled={authBusy || (!phoneOtpSent && phoneNumber.replace(/\D/g,"").length<6) || (phoneOtpSent && phoneOtp.length!==6)} onClick={phoneOtpSent?verifyPhoneCode:sendPhoneCode}>{authBusy?(phoneOtpSent?"در حال بررسی...":"در حال ارسال..."):phoneOtpSent?"تأیید و ادامه":"بعدی"}</button>
             <button className="wa-auth-google" type="button" onClick={()=>{setEmailStep("email");setPage("email-login");setNotice("");}}>ورود با جیمیل و رمز افغان‌چت</button>
-            <button className="wa-auth-google" type="button" onClick={loginWithGoogle} disabled={authBusy}>ورود با حساب گوگل</button>
             {phoneOtpSent && <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>}
             {notice && <p className="notice" role="alert">{notice}</p>}
           </div>
@@ -729,8 +693,8 @@ export default function App() {
         </div>
         <div className="wa-auth-footer">
           <p>با ادامه دادن، شما با شرایط استفاده و حریم خصوصی افغان چت موافقت می‌کنید.</p>
-          <button type="button" onClick={()=>setPage("phone-login")}>موافقت و ادامه</button>
-          <button className="wa-auth-google" type="button" onClick={()=>setPage("google-login")}>ورود با گوگل</button>
+          <button type="button" onClick={()=>setPage("phone-login")}>ورود با شمارهٔ تلفن</button>
+          <button className="wa-auth-google" type="button" onClick={()=>{setEmailStep("email");setEmailMode("signin");setPage("email-login");}}>ورود با جیمیل و رمز افغان‌چت</button>
         </div>
       </section> : page === "phone-login" ? <section className="wa-auth-screen wa-phone-screen" dir="rtl">
         <button className="wa-auth-menu" type="button" aria-label="منوی بیشتر">⋮</button>
@@ -750,8 +714,8 @@ export default function App() {
           {phoneOtpSent && <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>}
           {notice && <p className="notice" role="alert">{notice}</p>}
         </div>
-      </section> : page === "google-login" ? <section className="welcome-screen" dir="rtl"><div className="welcome-card login-card"><button className="back-link" type="button" onClick={()=>setPage("welcome")}>← بازگشت</button><div className="google-g large">G</div><h1>ورود امن با گوگل</h1><p className="welcome-intro">برای ورود، حساب گوگل را در صفحهٔ رسمی انتخاب کن.</p><button className="send" type="button" disabled={authBusy} onClick={loginWithGoogle}>{authBusy ? "در حال اتصال..." : "ادامه با Google"}</button><p className="security-note">رمز جیمیل را در افغان‌چت وارد نکن؛ تأیید هویت در صفحهٔ رسمی گوگل انجام می‌شود.</p>{notice && <p className="notice">{notice}</p>}</div></section>: null}
-      {!["welcome","phone-login","google-login"].includes(page) && <aside className="sidebar">
+      </section>
+      {!["welcome","phone-login","email-login"].includes(page) && <aside className="sidebar">
         <header className="brand">
           <div className="brand-identity">
             <div><h1>افغان چت</h1></div>
