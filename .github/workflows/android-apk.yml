@@ -46,6 +46,36 @@ jobs:
       - name: Add Android project
         run: npx cap add android
         timeout-minutes: 5
+      - name: Configure Android OAuth deep link
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+          match = re.search(r'<activity\\b[^>]*android:name="[^"]*MainActivity"[^>]*>', content, re.S)
+          if not match:
+              raise SystemExit("MainActivity activity tag not found in AndroidManifest.xml")
+          activity_tag = match.group(0)
+          if "android:launchMode=" not in activity_tag:
+              updated_tag = activity_tag[:-1] + ' android:launchMode="singleTask">'
+              content = content[:match.start()] + updated_tag + content[match.end():]
+              match = re.search(r'<activity\\b[^>]*android:name="[^"]*MainActivity"[^>]*>', content, re.S)
+          if 'android:scheme="afghanchat"' not in content:
+              closing = content.find("</activity>", match.end())
+              if closing < 0:
+                  raise SystemExit("MainActivity closing tag not found")
+              intent_filter = """
+                    <intent-filter>
+                        <action android:name="android.intent.action.VIEW" />
+                        <category android:name="android.intent.category.DEFAULT" />
+                        <category android:name="android.intent.category.BROWSABLE" />
+                        <data android:scheme="afghanchat" android:host="auth" android:path="/callback" />
+                    </intent-filter>
+              """
+              content = content[:closing] + intent_filter + content[closing:]
+          manifest.write_text(content)
+          PY
       - name: Configure Firebase Android
         run: |
           test -f google-services.json
