@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import { supabase } from "./supabase";
 import CallScreen from "./calls/CallScreen";
 import { createCallSession } from "./calls/callService";
@@ -64,6 +67,41 @@ export default function App() {
   const avatarPicker = useRef(null);
 
   useEffect(() => {
+    let appUrlListener;
+    let disposed = false;
+
+    const completeNativeOAuth = async (incomingUrl) => {
+      if (!incomingUrl || !incomingUrl.startsWith("afghanchat://auth/callback")) return;
+      try {
+        const callback = new URL(incomingUrl);
+        const authError = callback.searchParams.get("error_description") || callback.searchParams.get("error");
+        if (authError) throw new Error(authError);
+        const code = callback.searchParams.get("code");
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+        } else if (callback.hash) {
+          const params = new URLSearchParams(callback.hash.slice(1));
+          const message = params.get("error_description") || params.get("error");
+          if (message) throw new Error(message);
+        }
+        if (!disposed) setNotice("");
+      } catch (error) {
+        if (!disposed) setNotice("ورود گوگل کامل نشد: " + (error?.message || "خطای ناشناخته"));
+      } finally {
+        if (!disposed) setAuthBusy(false);
+        try { await Browser.close(); } catch {}
+      }
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener("appUrlOpen", ({ url }) => completeNativeOAuth(url))
+        .then((listener) => { appUrlListener = listener; });
+      CapacitorApp.getLaunchUrl().then((launch) => {
+        if (launch?.url) completeNativeOAuth(launch.url);
+      }).catch(() => {});
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       const user = session?.user ?? null;
       setAuthUser(user);
@@ -84,7 +122,11 @@ export default function App() {
         setPage("welcome");
       }
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      disposed = true;
+      subscription.unsubscribe();
+      appUrlListener?.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -345,21 +387,26 @@ export default function App() {
     setAuthBusy(true);
     setNotice("");
     try {
-      // Use the exact origin the user opened Afghan Chat from. Supabase must
-      // allow this URL in Authentication > URL Configuration.
-      const redirectTo = window.location.origin + "/";
-      const { error } = await supabase.auth.signInWithOAuth({
+      const isNative = Capacitor.isNativePlatform();
+      const redirectTo = isNative ? "afghanchat://auth/callback" : window.location.origin + "/";
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo,
+          skipBrowserRedirect: isNative,
           queryParams: { prompt: "select_account" }
         }
       });
       if (error) throw error;
+      if (isNative) {
+        if (!data?.url) throw new Error("نشانی ورود گوگل از سرور دریافت نشد.");
+        await Browser.open({ url: data.url, presentationStyle: "popover" });
+        setAuthBusy(false);
+      }
     } catch (error) {
       const message = error?.message || "خطای ناشناخته";
       if (/provider.*not.*enabled|unsupported_provider/i.test(message)) {
-        setNotice("ورود گوگل در Supabase هنوز فعال نشده است. باید Google Provider و Client ID/Secret در تنظیمات Supabase ثبت شود.");
+        setNotice("ورود گوگل در Supabase هنوز فعال نشده است. Google Provider و Client ID/Secret باید در تنظیمات Supabase ثبت شود.");
       } else {
         setNotice("شروع ورود با گوگل انجام نشد: " + message);
       }
