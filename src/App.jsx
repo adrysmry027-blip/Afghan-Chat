@@ -324,7 +324,7 @@ export default function App() {
 
   async function sendPasswordReset() {
     const email = emailAddress.trim().toLowerCase();
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setNotice("اول نشانی جیمیل خود را درست وارد کن.");
       return;
     }
