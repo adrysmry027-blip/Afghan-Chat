@@ -478,19 +478,37 @@ export default function App() {
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { setNotice("ضبط صدا در این مرورگر پشتیبانی نمی‌شود."); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const media = new MediaRecorder(stream);
+      // Android WebView and desktop browsers do not share one MediaRecorder codec.
+      // Select a codec the current runtime explicitly reports as supported.
+      const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+        "audio/webm",
+        "audio/ogg"
+      ];
+      const mimeType = candidates.find((type) => window.MediaRecorder.isTypeSupported?.(type));
+      const media = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       const chunks = [];
-      media.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      media.ondataavailable = (event) => { if (event.data?.size) chunks.push(event.data); };
       const recordingConversationId = active?.id;
       const recordingUserId = authUser?.id;
-      media.onstop = async () => {
-        const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" });
+      media.onerror = () => {
         stream.getTracks().forEach((track) => track.stop());
-        if (!recordingConversationId || !recordingUserId || !blob.size) return;
+        setRecording(false);
+        setNotice("در ضبط پیام صوتی خطا رخ داد. دوباره تلاش کن.");
+      };
+      media.onstop = async () => {
+        const blob = new Blob(chunks, { type: media.mimeType || "application/octet-stream" });
+        stream.getTracks().forEach((track) => track.stop());
+        if (!recordingConversationId || !recordingUserId || !blob.size) {
+          setNotice("پیام صوتی خالی بود یا گفتگو بسته شده است.");
+          return;
+        }
         const extension = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
         const objectPath = recordingConversationId + "/" + recordingUserId + "/" + Date.now() + "-voice." + extension;
         setNotice("در حال فرستادن پیام صوتی...");
-        const { error: uploadError } = await supabase.storage.from("chat-media").upload(objectPath, blob, { contentType: blob.type || "audio/webm" });
+        const { error: uploadError } = await supabase.storage.from("chat-media").upload(objectPath, blob, { contentType: blob.type || "application/octet-stream" });
         if (uploadError) { setNotice("بارگذاری پیام صوتی انجام نشد: " + uploadError.message); return; }
         const { error: messageError } = await supabase.from("messages").insert({
           conversation_id: recordingConversationId, sender_id: recordingUserId,
@@ -503,7 +521,9 @@ export default function App() {
         }
         setNotice("");
       };
-      recorder.current = media; media.start(); setRecording(true);
+      recorder.current = media;
+      media.start(250);
+      setRecording(true);
     } catch { setNotice("برای ضبط پیام صوتی، اجازهٔ استفاده از میکروفون را بده."); }
   }
 
