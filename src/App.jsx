@@ -353,7 +353,8 @@ export default function App() {
       setEmailStep("password");
       setEmailMode("signin");
       setEmailPassword("");
-      setNotice("رمز تازه ثبت شد. اکنون با همان جیمیل و رمز وارد شو.");
+      setPage("chats");
+      setNotice("");
     } catch (error) {
       setNotice("تغییر رمز انجام نشد: " + (error?.message || "خطای ناشناخته"));
     } finally {
@@ -575,7 +576,7 @@ export default function App() {
 
 
   // Guest preview is local-only and never reads or writes private Supabase data.
-  if (!authUser && !guestMode) {
+  if ((!authUser && !guestMode) || emailStep === "new-password") {
     return (
       <main className="app-shell">
         {page === "welcome" ? <section className="wa-auth-screen" dir="rtl">
