@@ -146,7 +146,7 @@ export default function App() {
         setDisplayName(data?.display_name || authUser.user_metadata?.display_name || authUser.email?.split("@")[0] || "");
         setAbout(data?.about || "خوش آمدی");
         setProfileImage(data?.avatar_url || "");
-        setPage(data?.display_name?.trim() && data?.avatar_url ? "chats" : "onboarding");
+        setPage("chats");
         setProfileLoading(false);
       });
     return () => { cancelled = true; };
@@ -264,8 +264,10 @@ export default function App() {
 
   function continueWithEmail() {
     const email = emailAddress.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setNotice("نشانی جیمیل را درست وارد کن.");
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const isUsername = /^@?[a-zA-Z0-9_]{3,32}$/.test(email);
+    if (!isEmail && !isUsername) {
+      setNotice("جیمیل یا نام کاربری را درست وارد کن.");
       return;
     }
     setEmailAddress(email);
@@ -276,8 +278,10 @@ export default function App() {
   async function submitEmailPassword() {
     const email = emailAddress.trim().toLowerCase();
     const password = emailPassword;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setNotice("نشانی جیمیل را درست وارد کن.");
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const isUsername = /^@?[a-zA-Z0-9_]{3,32}$/.test(email);
+    if ((!isEmail && !isUsername) || (emailMode === "signup" && !isEmail)) {
+      setNotice(emailMode === "signup" ? "برای ساخت حساب، جیمیل معتبر وارد کن." : "جیمیل یا نام کاربری را درست وارد کن.");
       return;
     }
     if (password.length < 8) {
@@ -297,21 +301,24 @@ export default function App() {
         if (data.session) {
           setNotice("");
         } else {
-          setEmailOtp("");
-          setEmailOtpSent(true);
-          setEmailStep("verify");
-          setNotice("کُد تأیید به ایمیلت فرستاده شد. کُد ۸ رقمی را وارد کن.");
+          setNotice("حساب ساخته شد. اگر تأیید ایمیل در سرور فعال باشد، فقط یک‌بار پیوند تأیید را از ایمیل باز کن؛ ورودهای بعدی با رمز انجام می‌شود.");
         }
-      } else {
+      } else if (isEmail) {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (!signInError) {
-          setNotice("");
-        } else {
-          // Never turn a failed login into an implicit sign-up. Users must choose
-          // the explicit account-creation action so a mistyped password cannot
-          // create confusing duplicate/unconfirmed accounts.
-          throw signInError;
-        }
+        if (signInError) throw signInError;
+        setNotice("");
+      } else {
+        const { data, error } = await supabase.functions.invoke("username-login", {
+          body: { username: email.replace(/^@/, ""), password }
+        });
+        if (error) throw error;
+        if (!data?.access_token || !data?.refresh_token) throw new Error("پاسخ ورود نام کاربری کامل نیست.");
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        });
+        if (sessionError) throw sessionError;
+        setNotice("");
       }
     } catch (error) {
       setNotice((emailMode === "signup" ? "ساخت حساب انجام نشد: " : "ورود انجام نشد: ") + error.message);
@@ -620,16 +627,12 @@ export default function App() {
             <button className="back-link" type="button" onClick={()=>{setPage("welcome");setEmailStep("email");setEmailPassword("");setNotice("");}}>← بازگشت</button>
             <h1>ورود با جیمیل</h1><p>جیمیل خود و رمز مخصوص افغان چت را وارد کن.</p>
             {emailStep === "email" ? <>
-              <label className="login-label" htmlFor="login-email">نشانی جیمیل</label>
-              <input id="login-email" type="email" dir="ltr" autoComplete="email" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com"/>
+              <label className="login-label" htmlFor="login-email">جیمیل یا نام کاربری</label>
+              <input id="login-email" type="text" dir="ltr" autoComplete="username" value={emailAddress} onChange={e=>setEmailAddress(e.target.value)} placeholder="name@gmail.com یا username"/>
               <button className="wa-next" type="button" onClick={continueWithEmail}>ادامه</button>
             </> : emailStep === "verify" ? <>
-              <p className="email-confirmed" dir="ltr">{emailAddress}</p>
-              <label className="login-label" htmlFor="email-otp">کُد ۸ رقمی تأیید ایمیل</label>
-              <input id="email-otp" className="wa-otp" type="text" inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={8} value={emailOtp} onChange={e=>setEmailOtp(e.target.value.replace(/\D/g,"").slice(0,8))} placeholder="کُد ۸ رقمی"/>
-              <button className="wa-next" type="button" onClick={verifyEmailCode} disabled={authBusy || emailOtp.length!==8}>{authBusy?"در حال بررسی...":"تأیید کُد و ورود"}</button>
-              <button className="back-link" type="button" onClick={resendEmailCode} disabled={authBusy}>فرستادن دوبارهٔ کُد</button>
-              <button className="back-link" type="button" onClick={()=>{setEmailStep("email");setEmailOtp("");setNotice("");}}>تغییر جیمیل</button>
+              <p>برای تأیید حساب، پیوندی را که به جیمیل فرستاده شده باز کن؛ در ورودهای بعدی کُد لازم نیست.</p>
+              <button className="back-link" type="button" onClick={()=>{setEmailStep("email");setEmailOtp("");setNotice("");}}>بازگشت به ورود</button>
             </> : emailStep === "new-password" ? <>
               <p className="email-confirmed" dir="ltr">{emailAddress}</p>
               <label className="login-label" htmlFor="login-password">رمز تازهٔ افغان چت</label>
