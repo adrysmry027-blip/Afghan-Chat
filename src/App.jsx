@@ -306,13 +306,30 @@ export default function App() {
   }
 
   async function loginWithGoogle() {
+    if (authBusy) return;
     setAuthBusy(true);
     setNotice("");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin }
-    });
-    if (error) { setNotice("ورود گوگل هنوز در تنظیمات Supabase فعال نشده است: " + error.message); setAuthBusy(false); }
+    try {
+      // Use the exact origin the user opened Afghan Chat from. Supabase must
+      // allow this URL in Authentication > URL Configuration.
+      const redirectTo = window.location.origin + "/";
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: { prompt: "select_account" }
+        }
+      });
+      if (error) throw error;
+    } catch (error) {
+      const message = error?.message || "خطای ناشناخته";
+      if (/provider.*not.*enabled|unsupported_provider/i.test(message)) {
+        setNotice("ورود گوگل در Supabase هنوز فعال نشده است. باید Google Provider و Client ID/Secret در تنظیمات Supabase ثبت شود.");
+      } else {
+        setNotice("شروع ورود با گوگل انجام نشد: " + message);
+      }
+      setAuthBusy(false);
+    }
   }
 
   function openCall(contact, media) {
