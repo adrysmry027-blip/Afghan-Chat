@@ -715,7 +715,7 @@ export default function App() {
           {phoneOtpSent && <button className="back-link" type="button" onClick={()=>{setPhoneOtpSent(false);setPhoneOtp("");setNotice("");}}>تغییر شماره</button>}
           {notice && <p className="notice" role="alert">{notice}</p>}
         </div>
-      </section>
+      </section> : null}
       {!["welcome","phone-login","email-login"].includes(page) && <aside className="sidebar">
         <header className="brand">
           <div className="brand-identity">
