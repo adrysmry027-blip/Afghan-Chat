@@ -53,14 +53,14 @@ jobs:
           import re
           manifest = Path("android/app/src/main/AndroidManifest.xml")
           content = manifest.read_text()
-          match = re.search(r'<activity\\b[^>]*android:name="[^"]*MainActivity"[^>]*>', content, re.S)
+          match = re.search(r'<activity\b[^>]*android:name="[^"]*MainActivity"[^>]*>', content, re.S)
           if not match:
               raise SystemExit("MainActivity activity tag not found in AndroidManifest.xml")
           activity_tag = match.group(0)
           if "android:launchMode=" not in activity_tag:
               updated_tag = activity_tag[:-1] + ' android:launchMode="singleTask">'
               content = content[:match.start()] + updated_tag + content[match.end():]
-              match = re.search(r'<activity\\b[^>]*android:name="[^"]*MainActivity"[^>]*>', content, re.S)
+              match = re.search(r'<activity\b[^>]*android:name="[^"]*MainActivity"[^>]*>', content, re.S)
           if 'android:scheme="afghanchat"' not in content:
               closing = content.find("</activity>", match.end())
               if closing < 0:
