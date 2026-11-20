@@ -1,21 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-<title id="title">نشان افغان چت</title><desc id="desc">نشان پیام‌رسان افغان چت با هواپیمای کاغذی و رنگ‌های پرچم افغانستان</desc>
+<title id="title">افغان چت</title><desc id="desc">نشان افغان چت با هواپیمای کاغذی، پرچم افغانستان، کوه‌های برفی و بنای تاریخی</desc>
 <defs>
- <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#55b8ff"/><stop offset=".52" stop-color="#0865d9"/><stop offset="1" stop-color="#082b69"/></linearGradient>
- <linearGradient id="bubble" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#168fff"/><stop offset="1" stop-color="#063ca8"/></linearGradient>
- <linearGradient id="flag" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#111"/><stop offset=".5" stop-color="#d92735"/><stop offset="1" stop-color="#159447"/></linearGradient>
- <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10"/></filter>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#1688ed"/><stop offset=".55" stop-color="#0755a8"/><stop offset="1" stop-color="#032b5b"/></linearGradient>
+ <linearGradient id="blue" x2="0" y2="1"><stop stop-color="#08a8f4"/><stop offset="1" stop-color="#0645b5"/></linearGradient>
+ <linearGradient id="flag" x2="1" y2=".1"><stop stop-color="#111"/><stop offset=".49" stop-color="#d92332"/><stop offset="1" stop-color="#159447"/></linearGradient>
+ <linearGradient id="snow" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#9dc9ed"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="9"/></filter>
 </defs>
-<rect width="512" height="512" rx="108" fill="url(#bg)"/>
-<circle cx="410" cy="100" r="62" fill="#fff" opacity=".12"/>
-<path d="M0 315 94 235l72 61 82-111 96 127 72-73 96 72v201H0Z" fill="#d8efff" opacity=".38"/>
-<path d="m0 355 102-76 72 59 82-85 91 100 72-53 93 65v147H0Z" fill="#062c6b" opacity=".42"/>
-<ellipse cx="256" cy="265" rx="178" ry="145" fill="#001b4e" opacity=".24" filter="url(#shadow)"/>
-<path d="M120 126c0-31 25-56 56-56h160c31 0 56 25 56 56v139c0 31-25 56-56 56H225l-67 50v-50h18c-31 0-56-25-56-56Z" fill="url(#bubble)" stroke="#fff" stroke-width="12"/>
-<path d="m172 184 194-75-94 198-34-81-66-42Z" fill="#fff" stroke="#e5f3ff" stroke-width="7" stroke-linejoin="round"/>
-<path d="m238 226 128-117-94 198-34-81Z" fill="#cfe6ff"/>
-<path d="M62 329c91-11 185-33 281-67 42-15 81-34 119-57l-9 69c-95 64-206 103-332 117Z" fill="url(#flag)" stroke="#fff" stroke-opacity=".35" stroke-width="4"/>
-<path d="M65 329c91-11 185-33 281-67 42-15 81-34 119-57" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4"/>
-<text x="256" y="420" text-anchor="middle" font-family="Tahoma,Arial,sans-serif" font-size="48" font-weight="700" fill="#fff">افغان‌چت</text>
-<text x="256" y="458" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="700" fill="#e8f5ff">AFGHAN CHAT</text>
+<rect width="512" height="512" rx="92" fill="url(#sky)"/>
+<circle cx="410" cy="90" r="65" fill="#dff7ff" opacity=".18"/>
+<path d="M0 280 76 205l55 49 91-124 91 133 62-77 137 110v216H0Z" fill="url(#snow)"/>
+<path d="m0 289 76-84 24 37 31-18 91-94 31 53 30-24 30 104 62-77 28 41 24-15 85 84v216H0Z" fill="#477fb2" opacity=".52"/>
+<path d="m0 348 92-73 59 38 89-84 79 77 70-55 123 75v186H0Z" fill="#073d71" opacity=".7"/>
+<!-- historic Afghan-style arched tower -->
+<g transform="translate(374 214)" fill="#d8c7a5" stroke="#8c775d" stroke-width="4">
+ <path d="M9 74h116v151H9z"/><path d="M0 74 67 37l67 37z"/><path d="M19 61h96V42H19z"/>
+ <path d="M36 0h61v42H36z"/><path d="M30 0 66-22 103 0z"/>
+ <path d="M49 225v-63a18 18 0 0 1 36 0v63z" fill="#294d68"/>
+ <path d="M22 96h15v20H22zm75 0h15v20H97zM22 132h15v20H22zm75 0h15v20H97z" fill="#31546b"/>
+</g>
+<ellipse cx="250" cy="266" rx="181" ry="157" fill="#001b4e" opacity=".34" filter="url(#shadow)"/>
+<!-- chat bubble -->
+<path d="M103 117c0-35 28-63 63-63h170c35 0 63 28 63 63v142c0 35-28 63-63 63H220l-73 55v-55h19c-35 0-63-28-63-63z" fill="url(#blue)" stroke="#fff" stroke-width="11"/>
+<path d="m145 166 219-79-106 224-39-91-74-54z" fill="#fff" stroke="#e8f5ff" stroke-width="6" stroke-linejoin="round"/>
+<path d="m219 220 145-133-106 224-39-91z" fill="#cbdcf5"/>
+<!-- Afghan tricolour ribbon -->
+<path d="M33 337c108-10 207-36 294-73 51-21 94-43 144-75l-9 65c-102 72-222 119-378 139z" fill="url(#flag)" stroke="#e8f5ff" stroke-opacity=".45" stroke-width="4"/>
+<path d="M355 286c13-13 35-14 48-1 12 13 10 35-3 46-13 11-34 9-45-4-11-13-11-29 0-41z" fill="none" stroke="#fff" stroke-width="3" opacity=".9"/>
+<path d="M378 294v27m-11-13h22m-18-10 14 20m0-20-14 20" stroke="#fff" stroke-width="2" opacity=".9"/>
+<text x="256" y="425" text-anchor="middle" font-family="Tahoma,Arial,sans-serif" font-size="47" font-weight="700" fill="#fff">افغان چت</text>
+<text x="256" y="465" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="1" fill="#e8f5ff">Afghan Chat</text>
 </svg>
